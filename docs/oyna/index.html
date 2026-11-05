@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="tr" data-version="1.9.1">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sütun Yarışı – Tarayıcıda oyna</title>
+<link rel="canonical" href="https://keremsarpb-web.github.io/ksb-sutun-yarisi/oyna/">
+<meta name="theme-color" content="#3a5bd9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sütun Yarışı">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="style.css?v=1.9.1">
+<script src="vendor/three.min.js?v=1.9.1"></script>
+<script src="game.js?v=1.9.1"></script>
+<script src="char3d.js?v=1.9.1"></script>
+<script src="matematik.js?v=1.9.1"></script>
+<script src="server.js?v=1.9.1"></script>
+<script src="web.js?v=1.9.1"></script>
+<link rel="stylesheet" href="web.css?v=1.9.1">
+<script defer src="vendor/alpine.min.js?v=1.9.1"></script>
+</head>
+<body>
+<div class="app" x-data="game()" x-init="init()" x-cloak>
+
+  <header class="top">
+    <h1 class="logo">Sütun<span>Yarışı</span></h1>
+    <button class="btn small install" x-show="installEvt" @click="install()">Uygulamayı yükle</button>
+    <template x-if="me">
+      <div class="chip">
+        <span x-text="me.name"></span>
+        <span class="tier class-tag" x-show="me.role==='student' && me.class_name" x-text="me.class_name"></span>
+        <span class="tier teacher-tag" x-show="isTeacher()">Öğretmen</span>
+        <span class="tier" x-show="!isTeacher()" x-text="tier(me.wins)"></span>
+        <span x-show="!isTeacher()" x-text="me.wins + ' galibiyet'"></span>
+        <span class="coin-chip" :title="bonusText()"><i>🪙</i><b x-text="coins"></b><small x-show="coinBonus" x-text="'+%' + coinBonus"></small></span>
+        <button class="linkbtn" x-show="isTeacher() && screen!=='teacher'" @click="openTeacher()">Öğretmen paneli</button>
+        <button class="linkbtn" x-show="screen==='lobby' || screen==='teacher'" @click="logout()">Çıkış</button>
+      </div>
+    </template>
+  </header>
+
+  <div class="web-bar">Tarayıcı sürümü · ilerlemen bu cihazda kaydedilir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a></div>
+
+  <p class="error" x-show="err" x-text="err" @click="err=''"></p>
+
+  <!-- Özel hesaplara bir kerelik tebrik -->
+  <div class="champion" x-show="champion" x-transition.opacity role="dialog" aria-modal="true" aria-labelledby="champ-title" @keydown.escape.window="champion=false">
+    <div class="champion-card">
+      <div class="champion-cup">🏆</div>
+      <h2 id="champ-title">Tebrikler, 1. sensin!</h2>
+      <p>Sana özel bir <b class="void-text">Void Kutusu</b> verildi. İçinden Void Aura çıkacak!</p>
+      <div class="box box-void champion-box">?</div>
+      <div class="row">
+        <button class="btn primary big" @click="openChampionBox()">Kutuyu aç</button>
+        <button class="btn" @click="champion=false">Sonra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sınıf girişi / kaydı -->
+  <section class="panel create" x-show="screen==='create'">
+    <div class="tabs" role="tablist">
+      <button role="tab" :class="authTab==='login' && 'on'" :aria-selected="authTab==='login'" @click="authTab='login'; err=''">Giriş yap</button>
+      <button role="tab" :class="authTab==='student' && 'on'" :aria-selected="authTab==='student'" @click="authTab='student'; err=''">Öğrenci hesabı aç</button>
+      <button role="tab" :class="authTab==='register' && 'on'" :aria-selected="authTab==='register'" @click="authTab='register'; err=''">Yeni sınıf kaydet</button>
+    </div>
+
+    <form x-show="authTab==='login'" @submit.prevent="login()">
+      <h2>Giriş yap</h2>
+      <p class="hint">Kendi hesabın varsa kullanıcı adını, sınıf hesabıyla oynuyorsanız sınıf adını yaz. Kutular, kozmetikler ve coinler hesabında saklı.</p>
+      <label for="login-name">Kullanıcı adı veya sınıf adı</label>
+      <input id="login-name" maxlength="20" x-model="loginForm.name" placeholder="ör. ali.y ya da 6-A" autocomplete="username" autocapitalize="off">
+      <label for="login-pass">Şifre</label>
+      <input id="login-pass" type="password" x-model="loginForm.password" autocomplete="current-password">
+      <button class="btn primary" type="submit">Giriş yap</button>
+    </form>
+
+    <form x-show="authTab==='register' || authTab==='student'" @submit.prevent="authTab==='student' ? registerStudent() : register()">
+    <h2>Oyuncu oluştur</h2>
+    <p class="hint">Hiçbir şey indirmeden oyna. İlerlemen bu cihazda, bu tarayıcıda kaydedilir.</p>
+    <div class="stage-mini">
+      <div x-effect="screen==='create' && (authTab==='register' || authTab==='student') && stage($el, form)"></div>
+    </div>
+    <template x-if="authTab==='student'">
+      <div>
+        <p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur.</p>
+        <div class="pair">
+          <div>
+            <label for="st-class">Sınıfın</label>
+            <input id="st-class" maxlength="16" x-model="form.class_name" placeholder="ör. 6-A">
+          </div>
+          <div>
+            <label for="st-cpass">Sınıf şifresi</label>
+            <input id="st-cpass" type="password" x-model="form.class_password" autocomplete="off">
+          </div>
+        </div>
+        <div class="pair">
+          <div>
+            <label for="st-display">Adın</label>
+            <input id="st-display" maxlength="20" x-model="form.display_name" placeholder="ör. Ali Y.">
+          </div>
+          <div>
+            <label for="st-user">Kullanıcı adı</label>
+            <input id="st-user" maxlength="20" x-model="form.username" placeholder="ör. ali.y" autocomplete="username" autocapitalize="off">
+          </div>
+        </div>
+        <p class="hint">Güvenliğin için soyadının yalnızca baş harfini yaz. Kullanıcı adıyla giriş yaparsın; harf, rakam ve nokta kullanabilirsin.</p>
+      </div>
+    </template>
+    <template x-if="authTab==='register'">
+      <div>
+        <label for="name">Adın</label>
+        <input id="name" maxlength="20" x-model="form.name" placeholder="ör. Ali" autocomplete="nickname">
+      </div>
+    </template>
+    <label>Renk</label>
+    <div class="swatches">
+      <template x-for="c in COLORS" :key="c">
+        <button type="button" class="swatch" :style="'background:' + c" :class="form.color===c && 'on'" @click="form.color=c" :aria-label="'Renk ' + c"></button>
+      </template>
+    </div>
+    <label>Şekil</label>
+    <div class="pills">
+      <template x-for="k in Object.keys(SHAPES).filter(k => k !== 'star')" :key="k">
+        <button type="button" class="pill" :class="form.shape===k && 'on'" @click="form.shape=k" x-text="SHAPES[k]"></button>
+      </template>
+    </div>
+    <label>Gözler</label>
+    <div class="pills">
+      <template x-for="(label, k) in EYES" :key="k">
+        <button type="button" class="pill" :class="form.eyes===k && 'on'" @click="form.eyes=k" x-text="label"></button>
+      </template>
+    </div>
+    <label>Ağız</label>
+    <div class="pills">
+      <template x-for="(label, k) in MOUTHS" :key="k">
+        <button type="button" class="pill" :class="form.mouth===k && 'on'" @click="form.mouth=k" x-text="label"></button>
+      </template>
+    </div>
+    <button class="btn primary" type="submit" x-text="'Oyna!'"></button>
+    <p class="hint">Hediye olarak 1 Mystery Box ile başlarsın.</p>
+    </form>
+  </section>
+
+  <!-- Lobi -->
+  <section class="lobby" x-show="screen==='lobby' && me">
+    <div class="panel">
+      <h2 x-text="me?.role==='student' ? 'Karakterin' : 'Sınıfınızın karakteri'"></h2>
+      <div class="stage-mini" :class="lobbyDance && 'dance-' + lobbyDance">
+        <div x-effect="screen==='lobby' && stage($el, me)"></div>
+      </div>
+      <label>Renk</label>
+      <div class="swatches">
+        <template x-for="c in COLORS" :key="c">
+          <button class="swatch" :style="'background:' + c" :class="me?.color===c && 'on'" @click="saveLook({color:c})" :aria-label="'Renk ' + c"></button>
+        </template>
+      </div>
+      <label>Şekil</label>
+      <div class="pills">
+        <template x-for="k in owned.shape" :key="k">
+          <button class="pill" :class="[me?.shape===k && 'on', k==='star' && 'r-legendary']" @click="saveLook({shape:k})" x-text="SHAPES[k]"></button>
+        </template>
+      </div>
+      <label>Gözler</label>
+      <div class="pills">
+        <template x-for="(label, k) in EYES" :key="k">
+          <button class="pill" :class="me?.eyes===k && 'on'" @click="saveLook({eyes:k})" x-text="label"></button>
+        </template>
+      </div>
+      <label>Ağız</label>
+      <div class="pills">
+        <template x-for="(label, k) in MOUTHS" :key="k">
+          <button class="pill" :class="me?.mouth===k && 'on'" @click="saveLook({mouth:k})" x-text="label"></button>
+        </template>
+      </div>
+      <label>Şapka</label>
+      <div class="pills">
+        <button class="pill" :class="!me?.hat && 'on'" @click="saveLook({hat:''})">Yok</button>
+        <template x-for="k in owned.hat" :key="k">
+          <button class="pill" :class="[me?.hat===k && 'on', 'r-' + HATS[k].r]" @click="saveLook({hat:k})"><span x-text="HATS[k].e"></span> <span x-text="HATS[k].n"></span></button>
+        </template>
+      </div>
+      <label>Aura</label>
+      <div class="pills">
+        <button class="pill" :class="!me?.aura && 'on'" @click="saveLook({aura:''})">Yok</button>
+        <template x-for="k in owned.aura" :key="k">
+          <button class="pill" :class="[me?.aura===k && 'on', 'r-' + AURAS[k].r]" @click="saveLook({aura:k})" x-text="AURAS[k].n"></button>
+        </template>
+      </div>
+      <label>Emote'lar <span class="count small" x-text="owned.emote.length + ' / ' + Object.keys(EMOTES).length"></span></label>
+      <div class="emote-list">
+        <template x-for="(it, k) in EMOTES" :key="k">
+          <span class="emote-chip" :class="[!owned.emote.includes(k) && 'locked', it.r && 'r-' + it.r, it.dance && owned.emote.includes(k) && 'playable']" :title="it.n + (owned.emote.includes(k) ? (it.dance ? ' (dene!)' : '') : ' (Mystery Box’tan çıkar)')" x-text="it.e" @click="it.dance && owned.emote.includes(k) && tryDance(k)"></span>
+        </template>
+      </div>
+      <p class="hint">Şapka, aura, emote’lar ve <b>Slay Yıldız</b> gövdesi Mystery Box’tan çıkar. <b class="void-text">Void Aura</b> klasik kutuda %5 şansla gelir; ondan da değerli <b class="divine-text">İlahi</b> ve <b class="eternal-text">Sonsuz</b> auralar çok daha nadirdir. Takılı aura, her doğru cevapta kazandığın coini artırır: sıradan +%10, nadir +%20, destansı +%35, efsanevi +%50, mitik +%100, ilahi +%150, sonsuz +%200.</p>
+    </div>
+
+    <div class="col">
+      <form class="panel claim" x-show="me?.needs_class && isTeacher()" @submit.prevent="setTeacherPassword()">
+        <h2>Öğretmen şifreni belirle</h2>
+        <p class="hint">Hesabının şifresi yok. Şifre belirlersen başka cihazlardan "Giriş yap" sekmesinde adını (<b x-text="me?.name"></b>) ve bu şifreyi yazarak öğretmen olarak girebilirsin.</p>
+        <div class="pair">
+          <div>
+            <label for="t-pass">Öğretmen şifresi</label>
+            <input id="t-pass" type="password" x-model="teacherPass.password" autocomplete="new-password" placeholder="en az 6 karakter">
+          </div>
+          <div>
+            <label for="t-pass2">Şifre tekrar</label>
+            <input id="t-pass2" type="password" x-model="teacherPass.password2" autocomplete="new-password">
+          </div>
+        </div>
+        <button class="btn primary" type="submit">Şifreyi kaydet</button>
+      </form>
+
+      <div class="panel teacher-cta" x-show="isTeacher()">
+        <h2>Öğretmen paneli</h2>
+        <p>Sınıfları, sınav sonuçlarını ve şifreleri buradan yönet.</p>
+        <button class="btn primary big" @click="openTeacher()">Paneli aç</button>
+      </div>
+
+      <form class="panel claim" x-show="me?.needs_class && !isTeacher()" @submit.prevent="claimClass()">
+        <h2>Hesabını sınıf hesabına çevir</h2>
+        <p class="hint">Bu hesap eski tip ve şifresi yok. Sınıf adı ve şifre belirlerseniz kutular ve kozmetikler korunur, her cihazdan aynı şifreyle girilir.</p>
+        <label for="claim-name">Sınıf adı</label>
+        <input id="claim-name" maxlength="16" x-model="claimForm.name" placeholder="ör. 6-A" autocomplete="username">
+        <div class="pair">
+          <div>
+            <label for="claim-pass">Sınıf şifresi</label>
+            <input id="claim-pass" type="password" x-model="claimForm.password" autocomplete="new-password" placeholder="en az 4 karakter">
+          </div>
+          <div>
+            <label for="claim-pass2">Şifre tekrar</label>
+            <input id="claim-pass2" type="password" x-model="claimForm.password2" autocomplete="new-password">
+          </div>
+        </div>
+        <button class="btn primary" type="submit">Sınıf hesabı yap</button>
+      </form>
+
+      <div class="panel play">
+        <h2>Turnuva maçı</h2>
+        <p>Bilgisayar oyuncularına karşı 2–5 kişilik maç, 10 soru. Doğru bilen sütununda yükselir, yanlış bilen düşer ve 1 can kaybeder. 3 canı biten elenir. En yüksekte kalan kazanır ve <b>Mystery Box</b> alır.</p>
+        <button class="btn primary big" @click="findMatch()">Rastgele maç bul</button>
+      </div>
+
+      <div class="panel prep">
+        <h2>Sınava Hazırlık</h2>
+        <p>6. sınıf müfredatından 10 etkinlik: test, doğru-yanlış ve eşleştirme. Her seferinde farklı sorular gelir. <b>10/10 yaparsan Mystery Box kazanırsın.</b> Her doğru cevap coin getirir.</p>
+        <button class="btn primary big pick-btn" @click="openTopics()">📚 Ders ve konu seç</button>
+        <div class="subjects">
+          <template x-for="s in EXAM_SUBJECTS" :key="s">
+            <button class="subject" :class="s==='Karma' && 'mix'" @click="startExam(s)">
+              <b x-text="s"></b>
+              <span x-text="s==='Karma' ? 'Bütün derslerden' : 'Bütün konular'"></span>
+            </button>
+          </template>
+        </div>
+        <p class="hint">Sınavdan günde en fazla 3 Mystery Box kazanılır. Coin sınırsız.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Mystery Box <span class="count" x-text="boxes.length"></span></h2>
+        <div class="boxes" x-show="boxes.length">
+          <template x-for="b in boxes" :key="b.id">
+            <button class="box" :class="['box-' + b.kind, opening===b.id && 'shake']" @click="openBox(b.id)" :disabled="opening" :title="BOX_KINDS[b.kind].n" :aria-label="BOX_KINDS[b.kind].n + ' aç'">?</button>
+          </template>
+        </div>
+        <p class="hint" x-show="!boxes.length">Kutun yok. Maç kazan, 10/10 yap, çark çevir ya da coinle satın al.</p>
+        <template x-if="loot">
+          <div class="loot" :class="'r-' + loot.rarity">
+            <div class="loot-icon" :class="['mythic', 'divine', 'eternal'].includes(loot.rarity) && 'void-icon icon-' + loot.rarity" x-text="lootInfo(loot).icon"></div>
+            <div>
+              <div class="rarity" x-text="RARITY[loot.rarity] + ' · ' + lootInfo(loot).kind"></div>
+              <b x-text="lootInfo(loot).name"></b>
+              <div class="hint" x-text="loot.duplicate ? 'Bu zaten sende vardı. Yerine ' + loot.refund + ' coin aldın.' :(loot.type === 'emote' ? 'Yeni emote! Maçta kullanabilirsin.' : (loot.rarity === 'eternal' ? 'SONSUZ! Oyundaki en değerli aura!' : loot.rarity === 'divine' ? 'İlahi! Void’den bile değerli!' : loot.rarity === 'mythic' ? 'Mitik! Çok az kişide var.' : 'Yeni kozmetik! Hemen tak.'))"></div>
+            </div>
+            <button class="btn small" x-show="!loot.duplicate && loot.type !== 'emote'" @click="saveLook({[loot.type]: loot.key}); loot=null">Tak</button>
+          </div>
+        </template>
+      </div>
+
+      <div class="panel shop" x-init="loadWheels()">
+        <h2>Mağaza ve Çarklar</h2>
+        <div class="wallet">
+          <span class="big-coin">🪙 <b x-text="coins"></b> coin</span>
+          <span class="bonus" :class="coinBonus && 'on'" x-text="bonusText()"></span>
+        </div>
+        <p class="hint">Doğru cevap 10, eşleştirme 15, 10/10 bonusu 50, maç galibiyeti 100 coin. Takılı aura bunları artırır.</p>
+        <div class="shop-boxes">
+          <template x-for="[k, b] in Object.entries(BOX_KINDS).filter(([, b]) => b.price)" :key="k">
+            <div class="shop-item">
+              <div class="box mini" :class="'box-' + k">?</div>
+              <b x-text="b.n"></b>
+              <span class="hint" x-text="b.d"></span>
+              <button class="btn small" :class="coins >= b.price && 'primary'" @click="buyBox(k)" :disabled="coins < b.price" x-text="'🪙 ' + b.price"></button>
+            </div>
+          </template>
+        </div>
+        <div class="wheels">
+          <template x-for="(info, k) in WHEEL_INFO" :key="k">
+            <div class="wheel-card" :class="'wheel-' + k">
+              <b x-text="info.n"></b>
+              <span class="hint" x-text="info.d"></span>
+              <div class="wheel-wrap">
+                <div class="wheel-pointer"></div>
+                <div class="wheel" :style="'transform: rotate(' + wheelRot[k] + 'deg)'" x-html="wheelSvg(k)"></div>
+              </div>
+              <button class="btn primary" @click="spin(k)" :disabled="!!spinning || (k==='daily' ? !freeSpin : coins < 150)"
+                x-text="spinning===k ? 'Dönüyor…' : (k==='daily' ? (freeSpin ? 'Ücretsiz çevir' : 'Yarın tekrar') : 'Çevir (🪙 150)')"></button>
+              <p class="prize" x-show="prize && prize.wheel===k" x-text="prize?.text"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="board-head">
+          <h2>Sıralama</h2>
+          <div class="tabs mini" role="tablist">
+            <button role="tab" :class="boardTab==='class' && 'on'" :aria-selected="boardTab==='class'" @click="boardTab='class'">Sınıflar</button>
+            <button role="tab" :class="boardTab==='student' && 'on'" :aria-selected="boardTab==='student'" @click="boardTab='student'">Öğrenciler</button>
+          </div>
+        </div>
+        <ol class="board" x-show="boardTab==='student'">
+          <template x-for="(p, i) in boardStudents" :key="p.id">
+            <li :class="p.id===me?.id && 'mine'">
+              <span class="rank" x-text="i + 1"></span>
+              <span class="dot" :style="'background:' + p.color"></span>
+              <span class="nm"><span x-text="p.name"></span> <small class="hint" x-text="p.class_name"></small></span>
+              <span class="tier" x-text="tier(p.wins)"></span>
+              <span class="w" x-text="p.wins + ' G / ' + p.games + ' M'"></span>
+            </li>
+          </template>
+        </ol>
+        <p class="hint" x-show="boardTab==='student' && !boardStudents.length">Henüz maç oynayan öğrenci yok.</p>
+        <ol class="board" x-show="boardTab==='class'">
+          <template x-for="(p, i) in board" :key="p.id">
+            <li :class="p.id===me?.id && 'mine'">
+              <span class="rank" x-text="i + 1"></span>
+              <span class="dot" :style="'background:' + p.color"></span>
+              <span class="nm" x-text="p.name"></span>
+              <span class="tier" x-text="tier(p.wins)"></span>
+              <span class="w" x-text="p.wins + ' G / ' + p.games + ' M'"></span>
+            </li>
+          </template>
+        </ol>
+        <p class="hint" x-show="boardTab==='class' && !board.length">Henüz maç oynanmadı.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kuyruk -->
+  <section class="panel queue" x-show="screen==='queue'">
+    <div class="spinner"></div>
+    <h2>Rakip aranıyor…</h2>
+    <div class="seats">
+      <template x-for="i in queue.max || 5" :key="i">
+        <span class="seat" :class="i <= queue.count && 'on'"></span>
+      </template>
+    </div>
+    <p x-show="queue.count < 2">Kuyrukta <b x-text="queue.count"></b> kişi var. En az 2 oyuncu gerekli.</p>
+    <p x-show="queue.count >= 2 && queue.count < 5">Maç <b x-text="Math.ceil((queue.start_in||0)/1000)"></b> saniye içinde başlıyor. 5 kişi dolarsa hemen başlar.</p>
+    <button class="btn" @click="cancelQueue()">Vazgeç</button>
+  </section>
+
+  <!-- Maç -->
+  <section class="match" x-show="screen==='match' && m">
+    <template x-if="m">
+      <div>
+        <div class="round">
+          <span x-text="'Tur ' + (m.q_index + 1) + ' / ' + m.total"></span>
+          <span class="cat" x-show="m.question" x-text="m.question?.category"></span>
+          <span class="secs" x-show="m.phase==='question'" x-text="secsLeft() + ' sn'"></span>
+        </div>
+
+        <div class="arena">
+          <div class="sun"></div>
+          <div class="arena-mark">KSB Games</div>
+          <template x-for="p in m.players" :key="p.id">
+            <div class="lane" :class="[!p.alive && 'out', p.id===me?.id && 'mine']">
+              <div class="answered" x-show="m.phase==='question' && p.answered && p.alive">✓</div>
+              <div class="rider" :class="[anim[p.id], !anim[p.id] && EMOTES[p.emote]?.dance && 'dance-' + p.emote]" :style="'--drop:' + pillarPx(p.id) + 'px'">
+                <template x-if="p.emote && EMOTES[p.emote]">
+                  <div class="emote-bubble" :key="p.emote + p.emote_at" :title="EMOTES[p.emote].n" x-text="EMOTES[p.emote].e"></div>
+                </template>
+                <div x-html="charHtml(p)"></div>
+              </div>
+              <div class="pillar" :style="'height:' + pillarPx(p.id) + 'px'">
+                <div class="cap"></div>
+                <div class="lvl" x-text="shown[p.id] || 0"></div>
+              </div>
+              <div class="tag">
+                <b x-text="p.id===me?.id ? 'Siz' : p.name"></b>
+                <span class="hearts" x-text="p.alive ? '♥'.repeat(p.lives) : 'Elendi'"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="timer" x-show="m.phase==='question'"><i :style="'width:' + (progress() * 100) + '%'"></i></div>
+
+        <div class="emote-bar" role="group" aria-label="Emote gönder">
+          <template x-for="k in owned.emote" :key="k">
+            <button class="emote-btn" :class="EMOTES[k]?.r && 'r-' + EMOTES[k].r" :title="EMOTES[k]?.n" :aria-label="EMOTES[k]?.n" @click="sendEmote(k)" :disabled="!emoteReady()" x-text="EMOTES[k]?.e"></button>
+          </template>
+        </div>
+
+        <div class="panel qcard" x-show="m.phase==='countdown'">
+          <h2 class="countdown" x-text="'Hazır ol! ' + secsLeft()"></h2>
+        </div>
+
+        <div class="panel qcard" x-show="m.question && m.phase!=='countdown' && m.phase!=='finished'">
+          <h2 class="qtext" x-text="m.question?.text"></h2>
+          <div class="opts">
+            <template x-for="(o, i) in (m.question?.options || [])" :key="i">
+              <button class="opt" :class="optClass(i)" @click="answer(i)" :disabled="m.phase!=='question' || m.my_choice!==null || !myP()?.alive">
+                <span class="letter" x-text="'ABCD'[i]"></span><span x-text="o"></span>
+              </button>
+            </template>
+          </div>
+          <p class="hint" x-show="m.phase==='question' && m.my_choice!==null">Cevabın alındı, diğerleri bekleniyor…</p>
+          <p class="hint" x-show="!myP()?.alive">Elendin. Maçı izlemeye devam edebilirsin.</p>
+          <p class="result" x-show="m.phase==='reveal'" x-text="revealText()"></p>
+        </div>
+
+        <div class="panel qcard finish" x-show="m.phase==='finished'">
+          <template x-if="winner()">
+            <div>
+              <div class="podium" x-html="charHtml(winner(), 'big')"></div>
+              <h2 x-text="winner().id===me?.id ? (me?.role==='student' ? 'Turnuvayı kazandın!' : 'Sınıfınız turnuvayı kazandı!') : winner().name + ' kazandı!'"></h2>
+              <p x-show="winner().id===me?.id">Ödül: <b>1 Mystery Box</b> ve coin. Lobide açabilirsin.</p>
+              <p x-show="winner().id!==me?.id">Bir dahaki maçta kutu senin olabilir.</p>
+            </div>
+          </template>
+          <div class="row">
+            <button class="btn primary" @click="playAgain()">Tekrar oyna</button>
+            <button class="btn" @click="leaveMatch()">Lobiye dön</button>
+          </div>
+        </div>
+
+        <div class="row" x-show="m.phase!=='finished' && !myP()?.alive">
+          <button class="btn" @click="leaveMatch()">Lobiye dön</button>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- Öğretmen paneli -->
+  <section class="teacher" x-show="screen==='teacher' && isTeacher()">
+    <div class="panel">
+      <div class="t-head">
+        <h2>Öğretmen paneli</h2>
+        <button class="btn small" @click="loadTeacher()" :disabled="teacher.loading">Yenile</button>
+        <button class="btn small" @click="screen='lobby'">Lobiye dön</button>
+      </div>
+      <p class="t-msg" x-show="teacher.msg" x-text="teacher.msg" @click="teacher.msg=''"></p>
+
+      <div class="stats">
+        <div><b x-text="teacher.classes.length"></b><span>kayıtlı sınıf</span></div>
+        <div><b x-text="teacher.students.length"></b><span>öğrenci hesabı</span></div>
+        <div><b x-text="teacher.classes.reduce((a, c) => a + c.games, 0)"></b><span>oynanan maç (sınıf başına)</span></div>
+        <div><b x-text="teacher.classes.reduce((a, c) => a + c.exams, 0)"></b><span>çözülen sınav</span></div>
+        <div><b x-text="teacher.classes.reduce((a, c) => a + c.fulls, 0)"></b><span>full (10/10)</span></div>
+      </div>
+
+      <h3>Sınıflar</h3>
+      <p class="hint" x-show="!teacher.classes.length && !teacher.loading">Henüz kayıtlı sınıf yok. Sınıflar giriş ekranındaki "Yeni sınıf kaydet" sekmesinden kaydolur.</p>
+      <div class="table-wrap" x-show="teacher.classes.length">
+        <table class="t-table">
+          <thead>
+            <tr><th>Sınıf</th><th>Galibiyet</th><th>Maç</th><th>Sınav</th><th>Ort. puan</th><th>Full</th><th>Kutu</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody>
+            <template x-for="c in teacher.classes" :key="c.id">
+              <tr>
+                <td class="t-name"><span x-html="charHtml(c)"></span><b x-text="c.name"></b></td>
+                <td x-text="c.wins"></td>
+                <td x-text="c.games"></td>
+                <td x-text="c.exams"></td>
+                <td x-text="c.avg_score === null ? '–' : c.avg_score + ' / 10'"></td>
+                <td x-text="c.fulls"></td>
+                <td x-text="c.boxes"></td>
+                <td class="t-actions">
+                  <template x-if="teacher.resetFor !== c.id && teacher.deleteFor !== c.id">
+                    <div>
+                      <button class="btn small" @click="tGiveBox(c)">+1 Kutu ver</button>
+                      <button class="btn small" @click="teacher.resetFor = c.id; teacher.newPass = ''">Şifre sıfırla</button>
+                      <button class="btn small danger" @click="teacher.deleteFor = c.id">Sil</button>
+                    </div>
+                  </template>
+                  <template x-if="teacher.resetFor === c.id">
+                    <form @submit.prevent="tResetPass(c)">
+                      <input type="password" x-model="teacher.newPass" placeholder="yeni şifre (en az 4)" :aria-label="c.name + ' için yeni şifre'" autocomplete="new-password">
+                      <button class="btn small" type="submit">Kaydet</button>
+                      <button class="btn small" type="button" @click="teacher.resetFor = null">Vazgeç</button>
+                    </form>
+                  </template>
+                  <template x-if="teacher.deleteFor === c.id">
+                    <div>
+                      <span class="warn" x-text="c.name + ' tamamen silinsin mi? Kutuları ve sonuçları da gider.'"></span>
+                      <button class="btn small danger" @click="tDelete(c)">Evet, sil</button>
+                      <button class="btn small" @click="teacher.deleteFor = null">Vazgeç</button>
+                    </div>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="t-sub">
+        <h3>Öğrenciler</h3>
+        <select x-model="teacher.classFilter" aria-label="Sınıfa göre süz" x-show="teacher.students.length">
+          <option value="">Bütün sınıflar</option>
+          <template x-for="c in teacher.classes" :key="c.id"><option :value="String(c.id)" x-text="c.name"></option></template>
+          <option value="none">Sınıfsız</option>
+        </select>
+      </div>
+      <p class="hint" x-show="!teacher.students.length && !teacher.loading">Henüz öğrenci hesabı yok. Öğrenciler giriş ekranındaki "Öğrenci hesabı aç" sekmesinden, sınıflarının adı ve sınıf şifresiyle hesap açar.</p>
+      <div class="table-wrap" x-show="teacher.students.length">
+        <table class="t-table">
+          <thead>
+            <tr><th>Öğrenci</th><th>Kullanıcı adı</th><th>Sınıf</th><th>Galibiyet</th><th>Sınav</th><th>Ort. puan</th><th>Full</th><th>Coin</th><th>İşlemler</th></tr>
+          </thead>
+          <tbody>
+            <template x-for="c in filteredStudents()" :key="c.id">
+              <tr>
+                <td class="t-name"><span x-html="charHtml(c)"></span><b x-text="c.name"></b></td>
+                <td x-text="c.username"></td>
+                <td x-text="c.class_name || '–'"></td>
+                <td x-text="c.wins + ' / ' + c.games"></td>
+                <td x-text="c.exams"></td>
+                <td x-text="c.avg_score === null ? '–' : c.avg_score + ' / 10'"></td>
+                <td x-text="c.fulls"></td>
+                <td x-text="c.coins"></td>
+                <td class="t-actions">
+                  <template x-if="teacher.resetFor !== c.id && teacher.deleteFor !== c.id">
+                    <div>
+                      <button class="btn small" @click="tGiveBox(c)">+1 Kutu</button>
+                      <button class="btn small" @click="teacher.resetFor = c.id; teacher.newPass = ''">Şifre sıfırla</button>
+                      <button class="btn small danger" @click="teacher.deleteFor = c.id">Sil</button>
+                    </div>
+                  </template>
+                  <template x-if="teacher.resetFor === c.id">
+                    <form @submit.prevent="tResetPass(c)">
+                      <input type="password" x-model="teacher.newPass" placeholder="yeni şifre (en az 4)" :aria-label="c.name + ' için yeni şifre'" autocomplete="new-password">
+                      <button class="btn small" type="submit">Kaydet</button>
+                      <button class="btn small" type="button" @click="teacher.resetFor = null">Vazgeç</button>
+                    </form>
+                  </template>
+                  <template x-if="teacher.deleteFor === c.id">
+                    <div>
+                      <span class="warn" x-text="c.name + ' hesabı silinsin mi? Kutuları, coinleri ve sonuçları da gider.'"></span>
+                      <button class="btn small danger" @click="tDelete(c)">Evet, sil</button>
+                      <button class="btn small" @click="teacher.deleteFor = null">Vazgeç</button>
+                    </div>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Derslere göre sınav başarısı</h3>
+      <p class="hint" x-show="!teacher.subjects.length">Henüz çözülmüş sınav yok.</p>
+      <div class="bars">
+        <template x-for="s in teacher.subjects" :key="s.subject">
+          <div class="bar-row">
+            <span class="bar-label" x-text="s.subject"></span>
+            <div class="bar"><i :style="'width:' + pct(s) + '%'"></i></div>
+            <span class="bar-val" x-text="'%' + pct(s) + ' (' + s.correct + '/' + s.answered + ')'"></span>
+          </div>
+        </template>
+      </div>
+
+      <h3>Kura çek</h3>
+      <p class="hint">Öğrenci isimlerini her satıra bir isim olacak şekilde yazın. Her ismin çıkma şansı eşittir. Aynı isim iki kez yazılırsa bir kez sayılır.</p>
+      <div class="kura">
+        <div class="kura-input">
+          <label for="kura-names">Öğrenciler (<span x-text="drawList().length"></span> kişi)</label>
+          <textarea id="kura-names" rows="9" x-model="draw.names" @change="saveDrawNames()" placeholder="Ayşe&#10;Mehmet&#10;Zeynep&#10;..."></textarea>
+          <div class="kura-opts">
+            <label for="kura-count">Kaç kişi?</label>
+            <input id="kura-count" type="number" min="1" :max="Math.max(1, drawList().length)" x-model.number="draw.count">
+            <label class="check"><input type="checkbox" x-model="draw.removeDrawn"> Çıkanları listeden çıkar</label>
+          </div>
+          <button class="btn primary" @click="runDraw()" :disabled="draw.spinning || !drawList().length" x-text="draw.spinning ? 'Çekiliyor…' : 'Kurayı çek'"></button>
+        </div>
+        <div class="kura-stage" aria-live="polite">
+          <div class="kura-name" :class="[draw.spinning && 'spin', !draw.spinning && draw.winners.length && 'won']" x-text="draw.shown || 'Kura bekleniyor'"></div>
+          <template x-if="!draw.spinning && draw.winners.length > 1">
+            <ol class="kura-winners">
+              <template x-for="w in draw.winners" :key="w"><li x-text="w"></li></template>
+            </ol>
+          </template>
+          <template x-if="draw.history.length">
+            <div class="kura-history">
+              <b>Bu oturumdaki kuralar</b>
+              <template x-for="(h, i) in draw.history" :key="i">
+                <div><span x-text="h.time"></span> · <span x-text="h.names.join(', ')"></span> <span class="hint" x-text="'(' + h.total + ' kişi arasından)'"></span></div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <h3>Sezon</h3>
+      <p class="hint">Yeni sezon başlatınca bütün sınıfların galibiyet ve maç sayıları sıfırlanır. Kutular, kozmetikler ve sınav sonuçları silinmez.</p>
+      <div class="row left">
+        <button class="btn danger" x-show="!teacher.seasonAsk" @click="teacher.seasonAsk = true">Yeni sezon başlat</button>
+        <template x-if="teacher.seasonAsk">
+          <div class="row left">
+            <span class="warn">Sıralama sıfırlansın mı?</span>
+            <button class="btn danger" @click="tSeason()">Evet, sıfırla</button>
+            <button class="btn" @click="teacher.seasonAsk = false">Vazgeç</button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ders ve konu seçimi -->
+  <section class="topics" x-show="screen==='topics' && catalog">
+    <div class="panel">
+      <div class="topics-head">
+        <h2>Ders ve konu seç</h2>
+        <button class="btn" @click="screen='lobby'">Lobiye dön</button>
+      </div>
+      <p class="hint">İstediğin kadar konu seç. Her sınavda bu konulardan 10 farklı etkinlik gelir; son sınavlarında çıkan sorular tekrar gelmez. Matematik soruları her seferinde yeni sayılarla üretilir.</p>
+      <label>Etkinlik türleri</label>
+      <div class="pills">
+        <template x-for="(n, k) in TYPE_NAMES" :key="k">
+          <button class="pill" :class="pick.types.includes(k) && 'on'" @click="toggleType(k)" x-text="n"></button>
+        </template>
+      </div>
+      <div class="subject-grid">
+        <template x-for="s in catalog || []" :key="s.subject">
+          <div class="subject-card">
+            <label class="subject-title">
+              <input type="checkbox" :checked="subjectAll(s)" @change="toggleSubject(s)">
+              <b x-text="s.subject"></b>
+              <span class="count small" x-text="s.topics.filter(t => pick.topics.includes(t.id)).length + ' / ' + s.topics.length"></span>
+            </label>
+            <div class="topic-list">
+              <template x-for="t in s.topics" :key="t.id">
+                <button class="topic" :class="pick.topics.includes(t.id) && 'on'" @click="toggleTopic(t.id)" :aria-pressed="pick.topics.includes(t.id)">
+                  <span x-text="t.name"></span>
+                  <small x-show="t.generated">∞</small>
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="topics-foot">
+        <span x-text="pick.topics.length + ' konu seçildi'"></span>
+        <button class="btn primary big" @click="startPicked()" :disabled="!pick.topics.length">Başlat</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sınava Hazırlık -->
+  <section class="exam" x-show="screen==='exam' && exam">
+    <template x-if="exam && !exam.result">
+      <div class="panel qcard">
+        <div class="exam-head">
+          <span class="cat" x-text="examQ()?.subject"></span>
+          <span class="unit" x-text="examQ()?.topic"></span>
+          <span class="type-tag" :class="'t-' + examQ()?.type" x-text="TYPE_NAMES[examQ()?.type]"></span>
+          <span class="progress-num" x-text="(exam.index + 1) + ' / ' + exam.questions.length"></span>
+        </div>
+        <div class="steps">
+          <template x-for="(q, i) in exam.questions" :key="i">
+            <i :class="i < exam.index ? 'done' : (i === exam.index ? 'now' : '')"></i>
+          </template>
+        </div>
+        <h2 class="qtext" x-text="examQ()?.text"></h2>
+
+        <!-- Test ve doğru-yanlış -->
+        <div class="opts" :class="examQ()?.type === 'tf' && 'tf'" x-show="examQ()?.type !== 'match'">
+          <template x-for="(o, i) in (examQ()?.options || [])" :key="exam.index + '-' + i">
+            <button class="opt" :class="examOptClass(i)" @click="examAnswer(i)" :disabled="!!exam.feedback || exam.sending">
+              <span class="letter" x-show="examQ()?.type === 'mc'" x-text="'ABCD'[i]"></span>
+              <span class="letter" x-show="examQ()?.type === 'tf'" x-text="i === 0 ? '✓' : '✗'"></span>
+              <span x-text="o"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Eşleştirme -->
+        <template x-if="examQ()?.type === 'match'">
+          <div class="match-board">
+            <p class="hint" x-show="!exam.feedback">Soldan bir kart seç, sonra sağdan eşini seç. Değiştirmek için tekrar seçebilirsin.</p>
+            <div class="match-cols">
+              <div class="match-col">
+                <template x-for="(l, i) in examQ().left" :key="exam.index + 'l' + i">
+                  <button class="mcard" :class="[exam.sel === i && 'sel', exam.links[i] !== null && 'linked', matchState(i)]"
+                    :style="exam.links[i] !== null ? '--lc:' + linkColor(i) : ''" @click="pickLeft(i)" :disabled="!!exam.feedback">
+                    <span class="dot" x-text="i + 1"></span><span x-text="l"></span>
+                  </button>
+                </template>
+              </div>
+              <div class="match-col">
+                <template x-for="(r, j) in examQ().right" :key="exam.index + 'r' + j">
+                  <button class="mcard right" :class="rightOwner(j) >= 0 && 'linked'"
+                    :style="rightOwner(j) >= 0 ? '--lc:' + linkColor(rightOwner(j)) : ''" @click="pickRight(j)" :disabled="!!exam.feedback">
+                    <span class="dot" x-text="rightOwner(j) >= 0 ? rightOwner(j) + 1 : ''"></span><span x-text="r"></span>
+                  </button>
+                </template>
+              </div>
+            </div>
+            <button class="btn primary" x-show="!exam.feedback" :disabled="!linksDone() || exam.sending" @click="sendExamAnswer(exam.links)">Kontrol et</button>
+          </div>
+        </template>
+
+        <template x-if="exam.feedback">
+          <div class="explain" :class="exam.feedback.is_correct ? 'good' : 'wrong'">
+            <b x-text="exam.feedback.is_correct ? 'Doğru! +' + exam.feedback.coins + ' 🪙' : (examQ()?.type === 'match' ? 'Bazı eşleştirmeler yanlış. Doğrusu:' : 'Yanlış. Doğru cevap: ' + correctText())"></b>
+            <p x-text="exam.feedback.explanation"></p>
+          </div>
+        </template>
+        <div class="row">
+          <button class="btn" @click="leaveExam()">Sınavdan çık</button>
+          <span class="earned" x-show="exam.earned" x-text="'🪙 +' + exam.earned"></span>
+          <button class="btn primary" x-show="exam.feedback" @click="examNext()" x-text="exam.index + 1 < exam.questions.length ? 'Sonraki' : 'Sonucu gör'"></button>
+        </div>
+      </div>
+    </template>
+
+    <template x-if="exam && exam.result">
+      <div class="panel qcard finish">
+        <div class="score" :class="exam.result.score === exam.result.total && 'full'">
+          <b x-text="exam.result.score"></b><span x-text="'/ ' + exam.result.total"></span>
+        </div>
+        <h2 x-text="exam.result.score === exam.result.total ? 'Full yaptın!' : (exam.result.score >= exam.result.total * 0.7 ? 'Çok iyi gidiyorsun!' : 'Biraz daha çalışalım!')"></h2>
+        <p class="earned big" x-text="'🪙 ' + exam.result.earned + ' coin kazandın' + (coinBonus ? ' (aura bonusu +%' + coinBonus + ')' : '')"></p>
+        <template x-if="exam.result.rewarded">
+          <div class="reward">
+            <div class="box shake-once">?</div>
+            <p><b>Mystery Box kazandın!</b> Lobide açabilirsin.</p>
+          </div>
+        </template>
+        <p x-show="exam.result.limit_reached">Bugünkü 3 kutu hakkını kullandın. Yarın yine full yaparsan kutu kazanırsın.</p>
+        <p class="hint" x-show="exam.result.short">Bu seçimde 10 etkinlik çıkmadı; Mystery Box için daha fazla konu ya da tür seç.</p>
+        <p class="hint" x-show="!exam.result.short && !exam.result.rewarded && !exam.result.limit_reached">10/10 yaparsan Mystery Box kazanırsın. Bugün kalan kutu hakkın: <b x-text="exam.result.boxes_left_today"></b></p>
+        <div class="row">
+          <button class="btn primary" @click="startExam(exam.req)">Yeni sorularla tekrar</button>
+          <button class="btn" @click="openTopics()">Konu değiştir</button>
+          <button class="btn" @click="leaveExam()">Lobiye dön</button>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <section class="panel" x-show="screen==='loading'"><div class="spinner"></div></section>
+</div>
+<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.1</div>
+<div class="update-bar" x-data x-show="$store.update.ready" x-cloak>
+  <span>Yeni güncelleme hazır: <b x-text="'v' + $store.update.version"></b></span>
+  <button class="btn small" @click="location.reload()">Şimdi güncelle</button>
+</div>
+</body>
+</html>

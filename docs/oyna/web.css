@@ -1,0 +1,4 @@
+/* Web sürümüne özel: okul hesabı sekmeleri ve çıkış gizli (kayıt bu cihazda) */
+.create .tabs, .chip .linkbtn { display: none !important; }
+.web-bar { text-align: center; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, .7); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; justify-self: center; }
+.web-bar a { color: var(--brand); font-weight: 700; }

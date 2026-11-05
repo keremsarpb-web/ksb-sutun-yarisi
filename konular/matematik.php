@@ -91,7 +91,7 @@ return [
                 $short = "{$x}A{$z} sayısı $k ile bölünüyor";
                 return ['text' => "{$x}A{$z} üç basamaklı sayısı $k ile tam bölünebiliyorsa A en çok kaçtır?", 'short' => $short . ', en büyük A', 'answer' => (string) $a,
                     'wrong' => array_map('strval', array_values(array_diff(range(0, 9), [$a]))),
-                    'exp' => "$k ile bölünebilme için rakamlar toplamı {$k}’ün katı olmalı: $x + A + $z. En büyük uygun A = $a."];
+                    'exp' => "$k ile bölünebilme için rakamlar toplamı $k ile bölünebilmeli: $x + A + $z. En büyük uygun A = $a."];
             },
         ],
         'm_asal' => [
@@ -105,13 +105,13 @@ return [
                     $short = "EBOB($a, $b)";
                     return ['text' => "$a ve $b sayılarının en büyük ortak böleni (EBOB) kaçtır?", 'short' => $short, 'answer' => m_num($g),
                         'wrong' => m_near($g, [m_lcm($a, $b), $g * 2, intdiv($g, 2) ?: 1]),
-                        'exp' => "$a ve {$b}’yi bölen en büyük sayı {$g}’dir. $a = $g × $p, $b = $g × $r."];
+                        'exp' => "$a ve $b sayılarını bölen en büyük sayı: $g. $a = $g × $p, $b = $g × $r."];
                 }
                 $l = m_lcm($a, $b);
                 $short = "EKOK($a, $b)";
                 return ['text' => "$a ve $b sayılarının en küçük ortak katı (EKOK) kaçtır?", 'short' => $short, 'answer' => m_num($l),
                     'wrong' => m_near($l, [$a * $b, $g, $l * 2]),
-                    'exp' => "$a ve {$b}’nin ortak katlarının en küçüğü {$l}’dir. EKOK = $g × $p × $r = $l."];
+                    'exp' => "Ortak katların en küçüğü: $l. EKOK = $g × $p × $r = $l."];
             },
         ],
         'm_tam' => [
@@ -151,8 +151,8 @@ return [
                     $d = [2, 3, 4, 5, 6][random_int(0, 4)]; $a = random_int(1, $d - 1); $k = random_int(2, 9);
                     $n = $d * $k;
                     $ans = intdiv($n, $d) * $a;
-                    $short = "{$n}’nin $a/{$d}’ü";
-                    return ['text' => "$n sayısının $a/{$d}’ü kaçtır?", 'short' => $short, 'answer' => m_num($ans),
+                    $short = "$n × $a/$d";
+                    return ['text' => "$n sayısının $a/$d kadarı kaçtır?", 'short' => $short, 'answer' => m_num($ans),
                         'wrong' => m_near($ans, [$k, $n - $ans, $n * $a]),
                         'exp' => "$n ÷ $d = $k, $k × $a = $ans."];
                 }
@@ -165,7 +165,7 @@ return [
                 $ans = m_frac($num, $l);
                 return ['text' => "$short işleminin sonucu kaçtır?", 'short' => $short, 'answer' => $ans,
                     'wrong' => array_values(array_diff([($a + $b) . '/' . ($d1 + $d2), m_frac($num + 1, $l), m_frac($a + $b, $l), m_frac($num, $l * 2)], [$ans])),
-                    'exp' => "Paydalar {$l}’de eşitlenir: " . ($a * intdiv($l, $d1)) . "/$l + " . ($b * intdiv($l, $d2)) . "/$l = $num/$l = $ans."];
+                    'exp' => "Paydalar $l olacak şekilde eşitlenir: " . ($a * intdiv($l, $d1)) . "/$l + " . ($b * intdiv($l, $d2)) . "/$l = $num/$l = $ans."];
             },
         ],
         'm_ondalik' => [
@@ -202,7 +202,7 @@ return [
                 }
                 $b = $y * $k; $a = $x * $k;
                 $short = "Kız : erkek = $x : $y, erkek $b → kız";
-                return ['text' => "Bir kulüpte kızların sayısının erkeklerin sayısına oranı $x/{$y}’dir. Kulüpte $b erkek varsa kaç kız vardır?", 'short' => $short, 'answer' => m_num($a),
+                return ['text' => "Bir kulüpte kızların sayısının erkeklerin sayısına oranı $x/$y ve kulüpte $b erkek varsa kaç kız vardır?", 'short' => $short, 'answer' => m_num($a),
                     'wrong' => m_near($a, [$a + $b, $b, $k]),
                     'exp' => "$b ÷ $y = $k, kızlar $x × $k = $a."];
             },

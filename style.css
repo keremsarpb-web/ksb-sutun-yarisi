@@ -45,7 +45,7 @@ label { display: block; font-weight: 800; font-size: 13px; text-transform: upper
 .create { max-width: 440px; justify-self: center; width: 100%; }
 .lobby { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
 .col { display: grid; gap: 16px; }
-@media (max-width: 760px) { .lobby { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .lobby { grid-template-columns: 1fr; } .lobby > .col { order: -1; } .stage-mini { height: 170px; } }
 
 input { width: 100%; font: 700 18px var(--body); padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; }
 input:focus, button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
