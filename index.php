@@ -192,7 +192,7 @@ $v = '?v=' . APP_VERSION;
           <span class="emote-chip" :class="[!owned.emote.includes(k) && 'locked', it.r && 'r-' + it.r, it.dance && owned.emote.includes(k) && 'playable']" :title="it.n + (owned.emote.includes(k) ? (it.dance ? ' (dene!)' : '') : ' (Mystery Box’tan çıkar)')" x-text="it.e" @click="it.dance && owned.emote.includes(k) && tryDance(k)"></span>
         </template>
       </div>
-      <p class="hint">Şapka, aura, emote’lar ve <b>Slay Yıldız</b> gövdesi Mystery Box’tan çıkar. <b class="void-text">Void Aura</b> klasik kutuda %5 şansla gelir. Takılı aura, her doğru cevapta kazandığın coini artırır: sıradan +%10, nadir +%20, destansı +%35, efsanevi +%50, Void +%100.</p>
+      <p class="hint">Şapka, aura, emote’lar ve <b>Slay Yıldız</b> gövdesi Mystery Box’tan çıkar. <b class="void-text">Void Aura</b> klasik kutuda %5 şansla gelir; ondan da değerli <b class="divine-text">İlahi</b> ve <b class="eternal-text">Sonsuz</b> auralar çok daha nadirdir. Takılı aura, her doğru cevapta kazandığın coini artırır: sıradan +%10, nadir +%20, destansı +%35, efsanevi +%50, mitik +%100, ilahi +%150, sonsuz +%200.</p>
     </div>
 
     <div class="col">
@@ -267,11 +267,11 @@ $v = '?v=' . APP_VERSION;
         <p class="hint" x-show="!boxes.length">Kutun yok. Maç kazan, 10/10 yap, çark çevir ya da coinle satın al.</p>
         <template x-if="loot">
           <div class="loot" :class="'r-' + loot.rarity">
-            <div class="loot-icon" :class="loot.key === 'void' && 'void-icon'" x-text="lootInfo(loot).icon"></div>
+            <div class="loot-icon" :class="['mythic', 'divine', 'eternal'].includes(loot.rarity) && 'void-icon icon-' + loot.rarity" x-text="lootInfo(loot).icon"></div>
             <div>
               <div class="rarity" x-text="RARITY[loot.rarity] + ' · ' + lootInfo(loot).kind"></div>
               <b x-text="lootInfo(loot).name"></b>
-              <div class="hint" x-text="loot.duplicate ? 'Bu zaten sende vardı. Yerine ' + loot.refund + ' coin aldın.' :(loot.type === 'emote' ? 'Yeni emote! Maçta kullanabilirsin.' : (loot.rarity === 'mythic' ? 'Mitik! Çok az kişide var.' : 'Yeni kozmetik! Hemen tak.'))"></div>
+              <div class="hint" x-text="loot.duplicate ? 'Bu zaten sende vardı. Yerine ' + loot.refund + ' coin aldın.' :(loot.type === 'emote' ? 'Yeni emote! Maçta kullanabilirsin.' : (loot.rarity === 'eternal' ? 'SONSUZ! Oyundaki en değerli aura!' : loot.rarity === 'divine' ? 'İlahi! Void’den bile değerli!' : loot.rarity === 'mythic' ? 'Mitik! Çok az kişide var.' : 'Yeni kozmetik! Hemen tak.'))"></div>
             </div>
             <button class="btn small" x-show="!loot.duplicate && loot.type !== 'emote'" @click="saveLook({[loot.type]: loot.key}); loot=null">Tak</button>
           </div>

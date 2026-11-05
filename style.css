@@ -411,3 +411,80 @@ input:focus, button:focus-visible { outline: 3px solid var(--brand); outline-off
 .tabs.mini button { padding: 4px 12px; font-size: 14px; }
 .t-sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .t-sub select { font: 700 14px var(--body); padding: 4px 8px; border-radius: 10px; border: 2px solid var(--line); }
+
+/* ---------- v1.9: 20 aura ---------- */
+.aura-bubble .csvg, .aura-bubble .live3d { animation: bob 2.6s ease-in-out infinite, bubble 2s ease-in-out infinite; }
+@keyframes bubble { 0%, 100% { filter: drop-shadow(0 0 5px #a5d8ff) drop-shadow(3px -4px 2px #e7f5ff); } 50% { filter: drop-shadow(0 0 8px #d0ebff) drop-shadow(-3px -6px 3px #ffffff); } }
+.aura-ocean .csvg, .aura-ocean .live3d { animation: bob 2.6s ease-in-out infinite, ocean 3s ease-in-out infinite; }
+@keyframes ocean { 0%, 100% { filter: drop-shadow(0 4px 6px #1971c2) drop-shadow(0 0 3px #74c0fc); } 50% { filter: drop-shadow(0 -2px 9px #0c8599) drop-shadow(0 0 5px #99e9f2); } }
+.aura-heart .csvg, .aura-heart .live3d { animation: bob 2.6s ease-in-out infinite, heartbeat 1.1s ease-in-out infinite; }
+@keyframes heartbeat { 0%, 40%, 100% { filter: drop-shadow(0 0 5px #f06595); } 20% { filter: drop-shadow(0 0 12px #e64980) drop-shadow(0 0 4px #ffdeeb); } }
+.aura-shadow .csvg, .aura-shadow .live3d { animation: bob 2.6s ease-in-out infinite, shadowAura 2.4s ease-in-out infinite; }
+@keyframes shadowAura { 0%, 100% { filter: drop-shadow(4px 4px 3px #000) drop-shadow(0 0 6px #343a40); } 50% { filter: drop-shadow(-4px 4px 5px #000) drop-shadow(0 0 10px #212529); } }
+.aura-toxic .csvg, .aura-toxic .live3d { animation: bob 2.6s ease-in-out infinite, toxic 1.3s ease-in-out infinite alternate; }
+@keyframes toxic { from { filter: drop-shadow(0 0 5px #94d82d) drop-shadow(0 3px 2px #5c940d); } to { filter: drop-shadow(0 0 11px #a9e34b) drop-shadow(0 -3px 4px #d8f5a2); } }
+.aura-diamond .csvg, .aura-diamond .live3d { animation: bob 2.6s ease-in-out infinite, diamond 1.8s linear infinite; }
+@keyframes diamond { 0% { filter: drop-shadow(0 0 4px #e3fafc) drop-shadow(-5px -5px 1px #ffffff); } 50% { filter: drop-shadow(0 0 10px #66d9e8) drop-shadow(5px -5px 2px #ffffff); } 100% { filter: drop-shadow(0 0 4px #e3fafc) drop-shadow(-5px -5px 1px #ffffff); } }
+.aura-phoenix .csvg, .aura-phoenix .live3d { animation: bob 2.6s ease-in-out infinite, phoenix .8s ease-in-out infinite alternate; }
+@keyframes phoenix { from { filter: drop-shadow(0 0 6px #ff922b) drop-shadow(0 -6px 6px #f03e3e) drop-shadow(0 0 2px #ffe066); } to { filter: drop-shadow(0 0 10px #fd7e14) drop-shadow(0 -12px 10px #e03131) drop-shadow(0 0 4px #fff3bf); } }
+
+/* Halkalı auralar: Galaksi (Mitik), Göksel ve Süpernova (İlahi), Sonsuzluk (Sonsuz) */
+.char.aura-galaxy, .stage3d.aura-galaxy, .char.aura-celestial, .stage3d.aura-celestial,
+.char.aura-supernova, .stage3d.aura-supernova, .char.aura-infinity, .stage3d.aura-infinity { position: relative; isolation: isolate; }
+.char.aura-galaxy::before, .stage3d.aura-galaxy::before, .char.aura-celestial::before, .stage3d.aura-celestial::before,
+.char.aura-supernova::before, .stage3d.aura-supernova::before, .char.aura-infinity::before, .stage3d.aura-infinity::before,
+.char.aura-infinity::after, .stage3d.aura-infinity::after {
+  content: ""; position: absolute; z-index: -1; border-radius: 50%; inset: -12% -16% 6% -16%; pointer-events: none;
+}
+.stage3d.aura-galaxy::before, .stage3d.aura-celestial::before, .stage3d.aura-supernova::before, .stage3d.aura-infinity::before, .stage3d.aura-infinity::after {
+  inset: auto; width: 160px; height: 160px; left: 50%; top: 50%; margin: -83px 0 0 -80px;
+}
+.aura-galaxy::before {
+  background: radial-gradient(circle at 30% 35%, #fff 0 1.5%, transparent 2.5%), radial-gradient(circle at 70% 60%, #fff 0 1%, transparent 2%),
+    radial-gradient(circle at 45% 75%, #ffd6f0 0 1.2%, transparent 2.2%), conic-gradient(#3b5bdb, #9c36b5, #1864ab, #e64980, #3b5bdb);
+  filter: blur(3px); opacity: .9; animation: voidSpin 6s linear infinite;
+}
+.aura-galaxy .csvg, .aura-galaxy .live3d { filter: drop-shadow(0 0 6px #748ffc) drop-shadow(0 0 12px #9c36b5); animation: bob 2.6s ease-in-out infinite; }
+.aura-celestial::before {
+  background: repeating-conic-gradient(from 0deg, rgba(255, 236, 153, .95) 0 6deg, transparent 6deg 22deg), radial-gradient(circle, #fff9db 0 38%, rgba(255, 212, 59, .6) 55%, transparent 70%);
+  filter: blur(1.5px); animation: voidSpin 9s linear infinite;
+}
+.aura-celestial .csvg, .aura-celestial .live3d { filter: drop-shadow(0 0 8px #fff3bf) drop-shadow(0 0 16px #fcc419); animation: bob 2.6s ease-in-out infinite, celestialFloat 3s ease-in-out infinite; }
+@keyframes celestialFloat { 50% { filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 0 22px #ffd43b); } }
+.aura-supernova::before {
+  background: radial-gradient(circle, #ffffff 0 18%, #ffe066 28%, #ff6b6b 45%, #9c36b5 62%, transparent 72%);
+  animation: nova 1.6s ease-in-out infinite;
+}
+@keyframes nova { 0%, 100% { transform: scale(.82); opacity: .75; } 50% { transform: scale(1.12); opacity: 1; filter: blur(2px); } }
+.aura-supernova .csvg, .aura-supernova .live3d { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 14px #ff8787); animation: bob 2.6s ease-in-out infinite; }
+.aura-infinity::before {
+  background: conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa, #f783ac, #ff6b6b);
+  -webkit-mask: radial-gradient(circle, transparent 52%, #000 54% 66%, transparent 68%); mask: radial-gradient(circle, transparent 52%, #000 54% 66%, transparent 68%);
+  animation: voidSpin 2.5s linear infinite;
+}
+.aura-infinity::after {
+  background: conic-gradient(from 180deg, #ffffff, transparent 25%, #ffffff 50%, transparent 75%, #ffffff);
+  -webkit-mask: radial-gradient(circle, transparent 40%, #000 42% 46%, transparent 48%); mask: radial-gradient(circle, transparent 40%, #000 42% 46%, transparent 48%);
+  animation: voidSpin 1.8s linear infinite reverse; opacity: .9;
+}
+.aura-infinity .csvg, .aura-infinity .live3d { animation: bob 2.6s ease-in-out infinite, infinityGlow 3s linear infinite; }
+@keyframes infinityGlow {
+  0% { filter: drop-shadow(0 0 9px #ff6b6b) drop-shadow(0 0 3px #fff); } 25% { filter: drop-shadow(0 0 9px #ffd43b) drop-shadow(0 0 3px #fff); }
+  50% { filter: drop-shadow(0 0 9px #4dabf7) drop-shadow(0 0 3px #fff); } 75% { filter: drop-shadow(0 0 9px #9775fa) drop-shadow(0 0 3px #fff); } 100% { filter: drop-shadow(0 0 9px #ff6b6b) drop-shadow(0 0 3px #fff); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-galaxy::before, .aura-celestial::before, .aura-supernova::before, .aura-infinity::before, .aura-infinity::after { animation: none; }
+}
+
+/* Yeni nadirlikler */
+.r-divine { border-color: #fab005; box-shadow: 0 0 0 2px #fff3bf inset; }
+.r-eternal { border-color: transparent; background: linear-gradient(#fff, #fff) padding-box, conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa, #ff6b6b) border-box; }
+.pill.r-eternal.on { background: linear-gradient(var(--ink), var(--ink)) padding-box, conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa, #ff6b6b) border-box; }
+.loot.r-divine { background: radial-gradient(circle at 20% 30%, #fff9db, #ffe066 60%, #f59f00); }
+.loot.r-divine .rarity { color: #9c5b00; font-weight: 800; }
+.loot.r-eternal { background: linear-gradient(120deg, #1b1b3a, #3b0a5c, #0b3d5c); color: #fff; border: 3px solid transparent; background-clip: padding-box; box-shadow: 0 0 0 3px #9775fa, 0 0 18px #4dabf7; }
+.loot.r-eternal .rarity, .loot.r-eternal .hint { color: #ffe066; }
+.icon-divine { color: #f59f00; text-shadow: 0 0 12px #ffd43b; }
+.icon-eternal { color: #fff; text-shadow: 0 0 8px #ff6b6b, 0 0 14px #4dabf7; }
+.divine-text { color: #e67700; }
+.eternal-text { background: linear-gradient(90deg, #f03e3e, #f59f00, #37b24d, #1c7ed6, #7048e8); -webkit-background-clip: text; background-clip: text; color: transparent; }

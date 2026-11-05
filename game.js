@@ -18,16 +18,28 @@ const HATS = {
   halo: { e: '😇', n: 'Hale', r: 'legendary' },
   slayshades: { e: '🕶️', n: 'Slay Gözlüğü', r: 'epic' },
 };
+// Değere göre sıralı. Void'den değerliler: Göksel, Süpernova (İlahi) ve Sonsuzluk (Sonsuz).
 const AURAS = {
   leaf: { n: 'Yaprak Aurası', r: 'common' },
+  bubble: { n: 'Köpük Aurası', r: 'common' },
   ice: { n: 'Buz Aurası', r: 'rare' },
   sakura: { n: 'Sakura Aurası', r: 'rare' },
+  ocean: { n: 'Okyanus Aurası', r: 'rare' },
+  heart: { n: 'Kalp Aurası', r: 'rare' },
   fire: { n: 'Ateş Aurası', r: 'epic' },
   electric: { n: 'Elektrik Aurası', r: 'epic' },
+  slay: { n: 'Slay Aurası', r: 'epic' },
+  shadow: { n: 'Gölge Aurası', r: 'epic' },
+  toxic: { n: 'Zehir Aurası', r: 'epic' },
   rainbow: { n: 'Gökkuşağı Aurası', r: 'legendary' },
   gold: { n: 'Altın Aura', r: 'legendary' },
-  slay: { n: 'Slay Aurası', r: 'epic' },
-  void: { n: 'Void Aura', r: 'mythic' },
+  diamond: { n: 'Elmas Aurası', r: 'legendary' },
+  phoenix: { n: 'Anka Aurası', r: 'legendary' },
+  void: { n: 'Void Aura', r: 'mythic', e: '◉' },
+  galaxy: { n: 'Galaksi Aurası', r: 'mythic', e: '🌌' },
+  celestial: { n: 'Göksel Aura', r: 'divine', e: '✴' },
+  supernova: { n: 'Süpernova Aurası', r: 'divine', e: '💥' },
+  infinity: { n: 'Sonsuzluk Aurası', r: 'eternal', e: '∞' },
 };
 // İlk dördü herkese açık, diğerleri Mystery Box'tan çıkar
 const EMOTES = {
@@ -44,24 +56,24 @@ const EMOTES = {
   griddy: { e: '🕺', n: 'Griddy Dansı', r: 'epic', dance: true },
 };
 // Aura değerine göre coin bonusu (sunucudaki AURA_BONUS ile aynı)
-const AURA_BONUS = { common: 10, rare: 20, epic: 35, legendary: 50, mythic: 100 };
+const AURA_BONUS = { common: 10, rare: 20, epic: 35, legendary: 50, mythic: 100, divine: 150, eternal: 200 };
 const BOX_KINDS = {
-  classic: { n: 'Klasik Kutu', price: 100, d: 'Void %5' },
-  gold: { n: 'Altın Kutu', price: 300, d: 'Destansı ve üstü %42 · Void %8' },
-  cosmic: { n: 'Kozmik Kutu', price: 800, d: 'Destansı ve üstü %80 · Void %15' },
+  classic: { n: 'Klasik Kutu', price: 100, d: 'Void %5 · İlahi/Sonsuz %1,5' },
+  gold: { n: 'Altın Kutu', price: 300, d: 'Destansı+ %42 · Void %8 · İlahi/Sonsuz %3' },
+  cosmic: { n: 'Kozmik Kutu', price: 800, d: 'Destansı+ %80 · Void %15 · İlahi/Sonsuz %7' },
 };
 const WHEEL_INFO = {
   daily: { n: 'Günlük Çark', d: 'Günde 1 kez ücretsiz' },
   gold: { n: 'Altın Çark', d: '150 coin · büyük ödüller' },
 };
 const TYPE_NAMES = { mc: 'Test', tf: 'Doğru-Yanlış', match: 'Eşleştirme' };
-const RARITY = { common: 'Sıradan', rare: 'Nadir', epic: 'Destansı', legendary: 'Efsanevi', mythic: 'Mitik' };
+const RARITY = { common: 'Sıradan', rare: 'Nadir', epic: 'Destansı', legendary: 'Efsanevi', mythic: 'Mitik', divine: 'İlahi', eternal: 'Sonsuz' };
 
 function lootInfo(l) {
   if (l.type === 'shape') return { name: (SHAPES[l.key] || l.key).replace('⭐ ', ''), icon: '⭐', kind: 'Gövde' };
   const map = { hat: HATS, aura: AURAS, emote: EMOTES }[l.type] || {};
   const it = map[l.key] || {};
-  return { name: it.n || l.key, icon: it.e || (l.key === 'void' ? '◉' : '✦'), kind: { hat: 'Şapka', aura: 'Aura', emote: 'Emote' }[l.type] };
+  return { name: it.n || l.key, icon: it.e || '✦', kind: { hat: 'Şapka', aura: 'Aura', emote: 'Emote' }[l.type] };
 }
 
 // ---------- Güncelleme kontrolü ----------

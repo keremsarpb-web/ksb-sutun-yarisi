@@ -23,16 +23,25 @@ const SHAPES = ['round', 'square', 'drop', 'cat', 'bear'];
 const MOUTHS = ['smile', 'laugh', 'tongue', 'wow', 'cool'];
 // Mystery Box ödülleri. Void Aura ayrı: her kutuda %5 şans (VOID_CHANCE).
 const LOOT = [
-    'common'    => [['hat', 'cap'], ['hat', 'sunhat'], ['hat', 'party'], ['hat', 'beanie'], ['aura', 'leaf'], ['emote', 'fire']],
-    'rare'      => [['hat', 'grad'], ['hat', 'helmet'], ['hat', 'chef'], ['hat', 'cowboy'], ['aura', 'ice'], ['aura', 'sakura'], ['emote', 'nerd'], ['emote', 'trophy'], ['emote', 'slay']],
-    'epic'      => [['hat', 'tophat'], ['hat', 'wizard'], ['hat', 'viking'], ['hat', 'slayshades'], ['aura', 'fire'], ['aura', 'electric'], ['aura', 'slay'], ['emote', 'hundred'], ['emote', 'griddy']],
-    'legendary' => [['hat', 'crown'], ['hat', 'halo'], ['aura', 'rainbow'], ['aura', 'gold'], ['emote', 'party'], ['shape', 'star']],
+    'common'    => [['hat', 'cap'], ['hat', 'sunhat'], ['hat', 'party'], ['hat', 'beanie'], ['aura', 'leaf'], ['aura', 'bubble'], ['emote', 'fire']],
+    'rare'      => [['hat', 'grad'], ['hat', 'helmet'], ['hat', 'chef'], ['hat', 'cowboy'], ['aura', 'ice'], ['aura', 'sakura'], ['aura', 'ocean'], ['aura', 'heart'], ['emote', 'nerd'], ['emote', 'trophy'], ['emote', 'slay']],
+    'epic'      => [['hat', 'tophat'], ['hat', 'wizard'], ['hat', 'viking'], ['hat', 'slayshades'], ['aura', 'fire'], ['aura', 'electric'], ['aura', 'slay'], ['aura', 'shadow'], ['aura', 'toxic'], ['emote', 'hundred'], ['emote', 'griddy']],
+    'legendary' => [['hat', 'crown'], ['hat', 'halo'], ['aura', 'rainbow'], ['aura', 'gold'], ['aura', 'diamond'], ['aura', 'phoenix'], ['emote', 'party'], ['shape', 'star']],
 ];
 // Kutu türleri: Void şansı %, [efsanevi %, destansı %, nadir %] (kalanı sıradan), coin fiyatı
 const BOXES = [
     'classic' => ['price' => 100, 'void' => 5,  'odds' => [4, 12, 30]],
     'gold'    => ['price' => 300, 'void' => 8,  'odds' => [12, 30, 40]],
     'cosmic'  => ['price' => 800, 'void' => 15, 'odds' => [35, 45, 20]],
+];
+// Özel auralar: her kutuda ayrı şansla (binde) çıkar, en değerliden başlanarak denenir.
+// Void'den değerliler: Göksel ve Süpernova (İlahi), Sonsuzluk (Sonsuz). Void'in %5'i korunur.
+const SPECIAL_AURAS = [
+    ['infinity',  'eternal', ['classic' => 2,  'gold' => 5,  'cosmic' => 10]],
+    ['supernova', 'divine',  ['classic' => 5,  'gold' => 10, 'cosmic' => 25]],
+    ['celestial', 'divine',  ['classic' => 8,  'gold' => 15, 'cosmic' => 35]],
+    ['void',      'mythic',  ['classic' => 50, 'gold' => 80, 'cosmic' => 150]], // Void %5 / %8 / %15
+    ['galaxy',    'mythic',  ['classic' => 30, 'gold' => 50, 'cosmic' => 100]],
 ];
 // Çarklar: dilimler [tür, değer, ağırlık]. Günlük çark ücretsiz (günde 1), Altın Çark coin ile.
 const WHEELS = [
@@ -50,9 +59,11 @@ const COIN_CORRECT = 10;
 const COIN_MATCH_ACTIVITY = 15;
 const COIN_FULL_BONUS = 50;
 const COIN_WIN = 100;
-const AURA_RARITY = ['leaf' => 'common', 'ice' => 'rare', 'sakura' => 'rare', 'fire' => 'epic', 'electric' => 'epic', 'slay' => 'epic',
+const AURA_RARITY = ['leaf' => 'common', 'bubble' => 'common', 'ice' => 'rare', 'sakura' => 'rare', 'ocean' => 'rare', 'heart' => 'rare',
+    'fire' => 'epic', 'electric' => 'epic', 'slay' => 'epic', 'shadow' => 'epic', 'toxic' => 'epic',
+    'diamond' => 'legendary', 'phoenix' => 'legendary', 'galaxy' => 'mythic', 'celestial' => 'divine', 'supernova' => 'divine', 'infinity' => 'eternal',
     'rainbow' => 'legendary', 'gold' => 'legendary', 'void' => 'mythic'];
-const AURA_BONUS = ['common' => 10, 'rare' => 20, 'epic' => 35, 'legendary' => 50, 'mythic' => 100];
+const AURA_BONUS = ['common' => 10, 'rare' => 20, 'epic' => 35, 'legendary' => 50, 'mythic' => 100, 'divine' => 150, 'eternal' => 200];
 
 function coin_bonus(string $aura): int { return AURA_BONUS[AURA_RARITY[$aura] ?? ''] ?? 0; }
 function coins_for(int $base, string $aura): int { return (int) round($base * (100 + coin_bonus($aura)) / 100); }
@@ -355,10 +366,13 @@ function match_state(int $id, int $me): array
 
 function roll_loot(int $pid, string $kind = 'classic'): array
 {
-    $box = BOXES[box_kind($kind)];
-    // Void Aura (Mitik): klasik kutuda %5. Zaten sende varsa kutu normal çekilişe döner.
-    if (random_int(1, 100) <= $box['void'] && !owns($pid, 'aura', 'void')) {
-        return ['rarity' => 'mythic', 'type' => 'aura', 'key' => 'void', 'duplicate' => false, 'refund' => 0];
+    $kind = box_kind($kind);
+    $box = BOXES[$kind];
+    // Özel auralar (Void dahil); sende olan atlanır ve kutu normal çekilişe döner
+    foreach (SPECIAL_AURAS as [$key, $rarity, $chance]) {
+        if (random_int(1, 1000) <= $chance[$kind] && !owns($pid, 'aura', $key)) {
+            return ['rarity' => $rarity, 'type' => 'aura', 'key' => $key, 'duplicate' => false, 'refund' => 0];
+        }
     }
     [$leg, $epic, $rare] = $box['odds'];
     $r = random_int(1, 100);
