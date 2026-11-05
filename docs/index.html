@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sütun Yarışı – KSB Games</title>
+<meta name="description" content="Sütun Yarışı: okullar için 6. sınıf bilgi yarışması. 2–5 oyuncu, doğru bilen sütununda yükselir, yanlış bilen düşer. Sınava hazırlık, eşleştirme etkinlikleri, öğretmen paneli. made by KSB Games.">
+<meta name="author" content="KSB Games">
+<link rel="canonical" href="https://keremsarpb-web.github.io/ksb-sutun-yarisi/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="KSB Games">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:url" content="https://keremsarpb-web.github.io/ksb-sutun-yarisi/">
+<meta property="og:title" content="Sütun Yarışı – KSB Games">
+<meta property="og:description" content="Okullar için 6. sınıf bilgi yarışması: doğru bilen sütununda yükselir, yanlış bilen düşer.">
+<meta name="theme-color" content="#120c22">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.png" type="image/png" sizes="192x192">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* KSB Games görünümü: gece moru zemin, turuncu kumanda, menekşe çizgi. Bilerek tek (koyu) görünüm. */
+  :root {
+    --night: #120c22;
+    --plum: #1d1435;
+    --card: #241a40;
+    --line: rgba(173, 150, 255, 0.16);
+    --orange: #ff8a1f;
+    --orange-deep: #e5690a;
+    --violet: #8b6cff;
+    --ink: #f4f0ff;
+    --soft: #b7acd6;
+    --ok: #4fd6c3;
+    --bad: #ff4d5e;
+    --display: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+    --body: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(60% 40% at 15% 0%, rgba(139, 108, 255, 0.22), transparent 70%),
+      radial-gradient(50% 35% at 95% 10%, rgba(255, 138, 31, 0.12), transparent 70%),
+      var(--night);
+    color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0; }
+  h2 { font-size: clamp(26px, 4vw, 36px); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--orange); }
+  .soft { color: var(--soft); }
+
+  /* başlık */
+  header { padding-block: 22px 8px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand svg { width: 52px; height: 52px; flex: none; }
+  .brand b { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: .02em; line-height: 1; }
+  .brand b span { display: block; font-size: 12px; letter-spacing: .38em; color: var(--orange); font-weight: 600; margin-top: 4px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  nav a { color: var(--soft); text-decoration: none; font-weight: 600; border-bottom: 1px solid transparent; }
+  nav a:hover { color: var(--ink); border-color: var(--orange); }
+
+  /* düğmeler */
+  .play {
+    display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 14px; padding: 13px 26px; text-decoration: none;
+    background: var(--orange); color: #1c0d00; font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: .02em;
+    box-shadow: 0 5px 0 var(--orange-deep), 0 10px 24px rgba(255, 138, 31, .25); transition: transform .08s, box-shadow .08s;
+  }
+  .play:hover { background: #ff9a3a; }
+  .play:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--orange-deep); }
+  .ghost { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: rgba(255, 255, 255, .04); border-radius: 14px; padding: 12px 18px; font-weight: 600; text-decoration: none; }
+  .ghost:hover { border-color: var(--violet); background: rgba(139, 108, 255, .1); }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  /* öne çıkan: canlı arena */
+  .hero { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); background: var(--card); border: 1px solid var(--line); border-radius: 22px; overflow: hidden; }
+  .hero .info { padding: 32px 30px; display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; }
+  .hero h1 { font-size: clamp(38px, 6vw, 60px); }
+  .hero h1 span { color: var(--orange); }
+  .hero p { margin: 0; color: var(--soft); font-size: 17px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; color: var(--soft); }
+  @media (max-width: 820px) { .hero { grid-template-columns: 1fr; } .hero .info { padding: 24px 20px 28px; } }
+
+  .arena {
+    position: relative; min-height: 360px; overflow: hidden; display: flex; align-items: flex-end; justify-content: space-around; padding: 0 4% 0;
+    background: linear-gradient(#5b9bd5 0%, #a9d4f5 55%, #cfe8ff 78%);
+  }
+  .arena::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: linear-gradient(#7cc36a, #5aa548); }
+  .arena .sun { position: absolute; top: 22px; right: 26px; width: 58px; height: 58px; border-radius: 50%; background: #ffe066; box-shadow: 0 0 40px #ffd43b; }
+  .arena .mark { position: absolute; top: 14px; left: 16px; font-family: var(--display); font-weight: 700; color: rgba(255, 255, 255, .8); letter-spacing: .08em; font-size: 14px; }
+  .arena .q { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); width: min(86%, 420px); text-align: center; background: rgba(18, 12, 34, .82); color: #fff; border-radius: 14px; padding: 8px 14px; font-weight: 600; font-size: 15px; }
+  .arena .q b { color: var(--orange); font-family: var(--mono); font-size: 12px; display: block; letter-spacing: .1em; }
+  .lane { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; width: 18%; max-width: 110px; }
+  .rider { width: 100%; display: flex; justify-content: center; transition: transform .2s; }
+  .rider img, .rider .blob { width: min(84px, 100%); aspect-ratio: 200 / 220; }
+  .rider .blob { border-radius: 50% 50% 46% 46%; }
+  .pillar { width: 62%; min-height: 12px; background: linear-gradient(90deg, #d9d0bd, #ece6d8 40%, #cfc6b2); border-radius: 6px 6px 0 0; transition: height .6s cubic-bezier(.3, 1.4, .5, 1); position: relative; margin-bottom: 34px; }
+  .pillar::before { content: ""; position: absolute; left: -8%; right: -8%; top: -8px; height: 10px; border-radius: 4px; background: #f3eee2; }
+  .lane .res { position: absolute; top: -26px; font-family: var(--display); font-weight: 700; font-size: 20px; opacity: 0; }
+  .lane.ok .res { color: #2fb36d; animation: pop 1s ease-out; }
+  .lane.bad .res { color: #e5484d; animation: pop 1s ease-out; }
+  .rider.jump { animation: jump .8s ease-out; }
+  .rider.fall { animation: fall 1s cubic-bezier(.5, 0, 1, .6); }
+  @keyframes jump { 40% { transform: translateY(-38px) scale(1.12, .92); } 70% { transform: translateY(3px) scale(.96, 1.06); } }
+  @keyframes fall { 30% { transform: translate(14px, -10px) rotate(25deg); } 100% { transform: translate(30px, 260px) rotate(160deg); opacity: 0; } }
+  @keyframes pop { 0% { opacity: 0; transform: translateY(8px); } 25% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* auralar (oyundaki ile aynı) */
+  .aura-gold img { filter: drop-shadow(0 0 6px #fcc419) drop-shadow(0 0 14px #f59f00); }
+  .aura-ice img { filter: drop-shadow(0 0 7px #74c0fc); }
+  .aura-sakura img { filter: drop-shadow(0 0 7px #ff8fab) drop-shadow(0 0 3px #ffd6e0); }
+  .ring { position: relative; isolation: isolate; }
+  .ring::before { content: ""; position: absolute; z-index: -1; border-radius: 50%; inset: -10% 2% 4% 2%; pointer-events: none; }
+  .aura-void::before { background: conic-gradient(#10002b, #5a189a, #000, #9d4edd, #240046, #10002b); filter: blur(7px); opacity: .85; animation: spin 2.2s linear infinite; }
+  .aura-void img { filter: drop-shadow(0 0 4px #000) drop-shadow(0 0 10px #7b2cbf); }
+  .aura-infinity::before { background: conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa, #f783ac, #ff6b6b); -webkit-mask: radial-gradient(circle, transparent 52%, #000 54% 66%, transparent 68%); mask: radial-gradient(circle, transparent 52%, #000 54% 66%, transparent 68%); animation: spin 2.5s linear infinite; }
+  .aura-infinity img { animation: rainbowGlow 3s linear infinite; }
+  .aura-celestial::before { background: repeating-conic-gradient(rgba(255, 236, 153, .95) 0 6deg, transparent 6deg 22deg), radial-gradient(circle, #fff9db 0 38%, rgba(255, 212, 59, .6) 55%, transparent 70%); filter: blur(1.5px); animation: spin 9s linear infinite; }
+  .aura-celestial img { filter: drop-shadow(0 0 8px #fff3bf) drop-shadow(0 0 16px #fcc419); }
+  .aura-supernova::before { background: radial-gradient(circle, #fff 0 18%, #ffe066 28%, #ff6b6b 45%, #9c36b5 62%, transparent 72%); animation: nova 1.6s ease-in-out infinite; }
+  .aura-galaxy::before { background: radial-gradient(circle at 30% 35%, #fff 0 1.5%, transparent 2.5%), radial-gradient(circle at 70% 60%, #fff 0 1%, transparent 2%), conic-gradient(#3b5bdb, #9c36b5, #1864ab, #e64980, #3b5bdb); filter: blur(3px); opacity: .9; animation: spin 6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes nova { 0%, 100% { transform: scale(.82); opacity: .75; } 50% { transform: scale(1.1); opacity: 1; } }
+  @keyframes rainbowGlow { 0% { filter: drop-shadow(0 0 9px #ff6b6b); } 33% { filter: drop-shadow(0 0 9px #ffd43b); } 66% { filter: drop-shadow(0 0 9px #4dabf7); } 100% { filter: drop-shadow(0 0 9px #ff6b6b); } }
+
+  /* sayılar */
+  .stats { margin-top: 18px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .stats div { background: var(--plum); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+  .stats b { display: block; font-family: var(--display); font-size: 30px; color: var(--orange); line-height: 1.1; }
+  .stats span { color: var(--soft); font-size: 14px; }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  section.block { margin-top: 64px; }
+  .block > .head { display: grid; gap: 8px; margin-bottom: 20px; max-width: 70ch; }
+  .block > .head p { margin: 0; color: var(--soft); }
+
+  /* özellikler */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .card .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: rgba(255, 138, 31, .14); margin-bottom: 10px; }
+  .card h3 { font-size: 20px; margin-bottom: 6px; }
+  .card p { margin: 0; color: var(--soft); font-size: 15px; }
+
+  /* nasıl oynanır */
+  .steps { counter-reset: s; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; }
+  .steps li { counter-increment: s; background: var(--plum); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 18px 64px; position: relative; color: var(--soft); }
+  .steps li::before { content: counter(s); position: absolute; left: 16px; top: 16px; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--orange); color: #1c0d00; font-family: var(--display); font-weight: 700; font-size: 18px; }
+  .steps li b { color: var(--ink); display: block; font-family: var(--display); font-size: 18px; font-weight: 600; }
+
+  /* auralar tablosu */
+  .rarity { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .rarity div { border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); background: var(--plum); }
+  .rarity b { display: block; font-family: var(--display); font-size: 18px; }
+  .rarity span { font-family: var(--mono); font-size: 13px; color: var(--soft); }
+  .rarity small { display: block; color: var(--soft); margin-top: 4px; font-size: 13px; }
+  .r-common b { color: #ced4da; } .r-rare b { color: #74c0fc; } .r-epic b { color: #da77f2; } .r-legendary b { color: #ffc078; }
+  .r-mythic b { color: #b197fc; } .r-divine b { color: #ffe066; }
+  .r-eternal { border: 1px solid transparent !important; background: linear-gradient(var(--plum), var(--plum)) padding-box, conic-gradient(#ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa, #ff6b6b) border-box !important; }
+  .r-eternal b { background: linear-gradient(90deg, #ff6b6b, #ffd43b, #69db7c, #4dabf7, #9775fa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .showcase { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin: 22px 0 6px; }
+  .showcase figure { margin: 0; display: grid; justify-items: center; gap: 6px; width: 120px; text-align: center; }
+  .showcase .ring, .showcase .plain { width: 96px; }
+  .showcase img, .showcase .blob { width: 96px; aspect-ratio: 200 / 220; display: block; }
+  .showcase figcaption { font-size: 13px; color: var(--soft); }
+  .showcase figcaption b { display: block; color: var(--ink); font-family: var(--display); font-size: 15px; }
+
+  /* kurulum */
+  .setup { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 820px) { .setup { grid-template-columns: 1fr; } }
+  .setup ol { margin: 10px 0 0; padding-left: 20px; color: var(--soft); }
+  .setup li { margin-bottom: 6px; }
+  .setup li b { color: var(--ink); }
+  code { font-family: var(--mono); font-size: 13px; background: rgba(139, 108, 255, .14); border-radius: 6px; padding: 1px 6px; color: var(--ink); overflow-wrap: anywhere; }
+  .note { margin-top: 14px; border-left: 3px solid var(--orange); padding: 10px 14px; background: rgba(255, 138, 31, .08); border-radius: 0 12px 12px 0; color: var(--soft); font-size: 15px; }
+
+  footer { margin-top: 72px; padding-block: 26px 40px; border-top: 1px solid var(--line); color: var(--soft); font-size: 14px; }
+  footer b { color: var(--ink); font-family: var(--display); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="30" fill="#241a40" stroke="#ff8a1f" stroke-width="3"/>
+    <circle cx="32" cy="32" r="25" fill="none" stroke="#8b6cff" stroke-width="1" stroke-dasharray="2 3" opacity=".7"/>
+    <rect x="16" y="20" width="32" height="20" rx="8" fill="#ff8a1f"/>
+    <path d="M22 30h7M25.5 26.5v7" stroke="#241a40" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="38" cy="27.5" r="2.2" fill="#241a40"/><circle cx="42" cy="32" r="2.2" fill="#241a40"/>
+    <path d="M22 47h20" stroke="#8b6cff" stroke-width="2.5" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<header class="wrap">
+  <div class="bar">
+    <a class="brand" href="https://keremsarpb-web.github.io/"><svg aria-hidden="true"><use href="#mark"/></svg><b>KSB <span>GAMES</span></b></a>
+    <nav aria-label="Sayfa içi">
+      <a href="#ozellikler">Özellikler</a>
+      <a href="#nasil">Nasıl oynanır</a>
+      <a href="#auralar">Auralar</a>
+      <a href="#kurulum">Kurulum</a>
+      <a href="https://github.com/keremsarpb-web/ksb-sutun-yarisi">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-labelledby="title">
+    <div class="arena" id="arena" aria-hidden="true">
+      <div class="sun"></div>
+      <div class="mark">KSB Games</div>
+      <div class="q"><b id="qnum">SORU 1 / 10</b><span id="qtext">3⁴ ifadesinin değeri kaçtır?</span></div>
+    </div>
+    <div class="info">
+      <span class="eyebrow">6. sınıf · bilgi yarışması</span>
+      <h1 id="title">Sütun <span>Yarışı</span></h1>
+      <p>Sınıfınla yarış! Doğru cevap veren karakter sütununda yükselir, yanlış cevap veren aşağı düşer. En yüksekte kalan kazanır ve Mystery Box açar.</p>
+      <div class="tags"><span class="tag">2–5 oyuncu</span><span class="tag">Maarif Modeli</span><span class="tag">Akıllı tahta</span><span class="tag">İnternetsiz</span></div>
+      <div class="actions">
+        <a class="play" href="https://github.com/keremsarpb-web/ksb-sutun-yarisi/archive/refs/heads/main.zip">İndir</a>
+        <a class="ghost" href="#kurulum">Nasıl kurulur?</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div><b>2–5</b><span>oyunculu maç</span></div>
+    <div><b>5</b><span>ders</span></div>
+    <div><b>37</b><span>konu</span></div>
+    <div><b>∞</b><span>matematik sorusu</span></div>
+    <div><b>20</b><span>aura</span></div>
+  </div>
+
+  <section class="block" id="ozellikler" aria-labelledby="ozellikler-h">
+    <div class="head">
+      <span class="eyebrow">Neler var?</span>
+      <h2 id="ozellikler-h">Ders çalışmak hiç bu kadar rekabetçi olmamıştı</h2>
+      <p>Okul ağında çalışır; akıllı tahta, tablet ve telefonlar aynı maça katılır.</p>
+    </div>
+    <div class="grid">
+      <article class="card"><div class="ic">🏛️</div><h3>Turnuva maçı</h3><p>Rastgele eşleşme, 10 soru, 3 can. Doğru bilen yükselir, yanlış bilen düşer; en yüksekte kalan kazanır.</p></article>
+      <article class="card"><div class="ic">📚</div><h3>Sınava Hazırlık</h3><p>Maarif Modeli 6. sınıf müfredatından 5 ders, 37 konu. İstediğin konuları seç, 10 etkinlik çöz, 10/10 yaparsan kutu kazan.</p></article>
+      <article class="card"><div class="ic">🧩</div><h3>Eşleştirme ve doğru-yanlış</h3><p>Test, doğru-yanlış ve eşleştirme etkinlikleri. Her sorudan sonra açıklamalı doğru cevap.</p></article>
+      <article class="card"><div class="ic">🔁</div><h3>Her seferinde farklı</h3><p>Son sınavlarda çıkan sorular tekrar gelmez. Matematik soruları her seferinde yeni sayılarla üretilir.</p></article>
+      <article class="card"><div class="ic">🧑‍🏫</div><h3>Öğretmen paneli</h3><p>Sınıf ve öğrenci istatistikleri, derslere göre başarı, şifre sıfırlama, kutu verme ve adil kura çekme.</p></article>
+      <article class="card"><div class="ic">👤</div><h3>Sınıf ve öğrenci hesapları</h3><p>Sınıf olarak ya da kendi hesabınla oyna. Öğrenciler sınıf şifresiyle katılır; her şey kaydedilir.</p></article>
+      <article class="card"><div class="ic">🪙</div><h3>Coin, kutu ve çark</h3><p>Her doğru cevap coin kazandırır. 3 tür Mystery Box, günlük ücretsiz çark ve Altın Çark.</p></article>
+      <article class="card"><div class="ic">🕺</div><h3>Kozmetikler ve emote'lar</h3><p>Low poly 3D karakterler, 14 şapka, 20 aura, Slay Yıldız gövdesi ve maçta atılan emote'lar, Griddy dansı dahil.</p></article>
+      <article class="card"><div class="ic">💾</div><h3>USB'de taşı</h3><p>Kurulum gerektirmeyen USB sürümüyle okul bilgisayarından akıllı tahtaya taşı. Uygulama olarak da yüklenir.</p></article>
+    </div>
+  </section>
+
+  <section class="block" id="nasil" aria-labelledby="nasil-h">
+    <div class="head">
+      <span class="eyebrow">Nasıl oynanır?</span>
+      <h2 id="nasil-h">Dört adımda maç</h2>
+    </div>
+    <ol class="steps">
+      <li><b>Hesabını aç</b>Sınıfını kaydet ya da sınıf şifresiyle kendi öğrenci hesabını aç. Karakterini seç.</li>
+      <li><b>Maç bul</b>"Rastgele maç bul"a bas. 2–5 oyuncu toplanınca maç başlar.</li>
+      <li><b>Doğru cevapla</b>Her soruya 15 saniye. Doğru bilen sütununda bir kat yükselir, yanlış bilen düşer ve can kaybeder.</li>
+      <li><b>Ödülünü al</b>Kazanan Mystery Box alır. Kutudan şapka, aura, emote ya da nadir gövdeler çıkar.</li>
+    </ol>
+  </section>
+
+  <section class="block" id="auralar" aria-labelledby="auralar-h">
+    <div class="head">
+      <span class="eyebrow">20 aura · 7 nadirlik</span>
+      <h2 id="auralar-h">Auran ne kadar değerliyse o kadar coin</h2>
+      <p>Takılı aura, her doğru cevapta kazandığın coini artırır. Void'den bile değerli İlahi ve Sonsuz auralar yalnızca kutulardan, çok küçük şansla çıkar.</p>
+    </div>
+    <div class="showcase" id="showcase"></div>
+    <div class="rarity">
+      <div class="r-common"><b>Sıradan</b><span>+%10 coin</span><small>Yaprak, Köpük</small></div>
+      <div class="r-rare"><b>Nadir</b><span>+%20 coin</span><small>Buz, Sakura, Okyanus, Kalp</small></div>
+      <div class="r-epic"><b>Destansı</b><span>+%35 coin</span><small>Ateş, Elektrik, Slay, Gölge, Zehir</small></div>
+      <div class="r-legendary"><b>Efsanevi</b><span>+%50 coin</span><small>Gökkuşağı, Altın, Elmas, Anka</small></div>
+      <div class="r-mythic"><b>Mitik</b><span>+%100 coin</span><small>Void, Galaksi</small></div>
+      <div class="r-divine"><b>İlahi</b><span>+%150 coin</span><small>Göksel, Süpernova</small></div>
+      <div class="r-eternal"><b>Sonsuz</b><span>+%200 coin</span><small>Sonsuzluk</small></div>
+    </div>
+  </section>
+
+  <section class="block" id="kurulum" aria-labelledby="kurulum-h">
+    <div class="head">
+      <span class="eyebrow">Kurulum</span>
+      <h2 id="kurulum-h">Okulunda çalıştır</h2>
+      <p>Sütun Yarışı PHP ve MySQL ile çalışan bir okul uygulamasıdır. Bir bilgisayara kurulur, aynı ağdaki herkes tarayıcıdan bağlanır.</p>
+    </div>
+    <div class="setup">
+      <article class="card">
+        <h3>XAMPP ile</h3>
+        <ol>
+          <li><a href="https://www.apachefriends.org/">XAMPP</a>'ı kur, <b>Apache</b> ve <b>MySQL</b>'i başlat.</li>
+          <li>Oyunu <a href="https://github.com/keremsarpb-web/ksb-sutun-yarisi/archive/refs/heads/main.zip">indir</a>, <code>C:\xampp\htdocs\sutun-yarisi</code> klasörüne aç.</li>
+          <li>phpMyAdmin'den önce <code>database.sql</code>, sonra <code>sinav.sql</code> dosyasını içe aktar.</li>
+          <li>Tarayıcıda <code>http://localhost/sutun-yarisi/</code> adresini aç.</li>
+          <li>Tahta ve tabletler bilgisayarın IP adresiyle bağlanır: <code>http://192.168.x.x/sutun-yarisi/</code></li>
+        </ol>
+      </article>
+      <article class="card">
+        <h3>Öğretmen hesabı</h3>
+        <ol>
+          <li>Oyunda kendine bir hesap aç.</li>
+          <li>phpMyAdmin'de şu komutu çalıştır:<br><code>UPDATE players SET role = 'teacher' WHERE name = 'Hesap Adın';</code></li>
+          <li>Sağ üstte <b>Öğretmen paneli</b> belirir. Sınıfları, öğrencileri ve sonuçları buradan yönetirsin.</li>
+        </ol>
+        <p class="note">Yeni sürümler eski veritabanını ilk açılışta kendiliğinden günceller; sınıflar, kutular ve coinler kaybolmaz.</p>
+      </article>
+    </div>
+    <div class="actions" style="margin-top:18px">
+      <a class="play" href="https://github.com/keremsarpb-web/ksb-sutun-yarisi/archive/refs/heads/main.zip">Oyunu indir (.zip)</a>
+      <a class="ghost" href="https://github.com/keremsarpb-web/ksb-sutun-yarisi">Kaynak kod</a>
+      <a class="ghost" href="https://keremsarpb-web.github.io/">Diğer KSB Games oyunları</a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="bar">
+    <span><b>Sütun Yarışı</b> · made by KSB Games</span>
+    <a href="https://keremsarpb-web.github.io/">keremsarpb-web.github.io</a>
+  </div>
+</footer>
+
+<script src="vendor/three.min.js"></script>
+<script>
+  // char3d.js oyundaki karakter seçeneklerini bekler
+  const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#8d6e63'];
+  const EYES = { normal: 1, happy: 1, cool: 1, sleepy: 1, star: 1 };
+  const MOUTHS = { smile: 1, laugh: 1, tongue: 1, wow: 1, cool: 1 };
+</script>
+<script src="char3d.js"></script>
+<script>
+(() => {
+  const img = p => {
+    if (window.Char3D) { try { return `<img src="${Char3D.image(p)}" alt="">`; } catch (e) {} }
+    return `<div class="blob" style="background:${p.color}"></div>`;
+  };
+  const ring = ['void', 'infinity', 'celestial', 'supernova', 'galaxy'];
+  const wrapAura = (p, html) => `<div class="${ring.includes(p.aura) ? 'ring ' : ''}aura-${p.aura || 'none'}">${html}</div>`;
+
+  // Canlı mini arena: her turda bazıları yükselir, bazıları düşer
+  const players = [
+    { color: '#4dabf7', shape: 'round', eyes: 'happy', mouth: 'smile', hat: 'crown', aura: 'gold' },
+    { color: '#f783ac', shape: 'star', eyes: 'star', mouth: 'laugh', hat: 'slayshades', aura: 'infinity' },
+    { color: '#69db7c', shape: 'cat', eyes: 'cool', mouth: 'cool', hat: 'wizard', aura: 'void' },
+    { color: '#ffa94d', shape: 'bear', eyes: 'normal', mouth: 'tongue', hat: 'cowboy', aura: 'sakura' },
+    { color: '#748ffc', shape: 'drop', eyes: 'sleepy', mouth: 'wow', hat: 'viking', aura: 'ice' },
+  ];
+  const questions = [
+    '3⁴ ifadesinin değeri kaçtır?', 'Güneş’e en yakın gezegen hangisidir?', '“Siyah” sözcüğünün eş anlamlısı nedir?',
+    'EBOB(24, 36) kaçtır?', 'Türk adıyla kurulan ilk Türk devleti hangisidir?', 'We cook meals in the ___.',
+    '(−7) + 12 işleminin sonucu kaçtır?', 'Yoğunluk nasıl hesaplanır?', 'Tümleri 35° olan açı kaç derecedir?', 'Kalp hangi sistemin organıdır?',
+  ];
+  const arena = document.getElementById('arena');
+  const lanes = players.map(p => {
+    const el = document.createElement('div');
+    el.className = 'lane';
+    el.innerHTML = `<span class="res"></span><div class="rider">${wrapAura(p, img(p))}</div><div class="pillar"></div>`;
+    arena.appendChild(el);
+    return { el, rider: el.querySelector('.rider'), pillar: el.querySelector('.pillar'), res: el.querySelector('.res'), h: 1 + Math.floor(Math.random() * 3) };
+  });
+  const STEP = 34;
+  const draw = () => lanes.forEach(l => { l.pillar.style.height = (12 + l.h * STEP) + 'px'; });
+  draw();
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let q = 0;
+  const round = () => {
+    q = (q + 1) % questions.length;
+    document.getElementById('qnum').textContent = `SORU ${q + 1} / 10`;
+    document.getElementById('qtext').textContent = questions[q];
+    lanes.forEach(l => {
+      const ok = Math.random() < 0.7 && l.h < 6;
+      l.el.classList.remove('ok', 'bad'); void l.el.offsetWidth;
+      l.el.classList.add(ok ? 'ok' : 'bad');
+      l.res.textContent = ok ? '+1' : '✗';
+      l.rider.classList.remove('jump', 'fall'); void l.rider.offsetWidth;
+      l.rider.classList.add(ok ? 'jump' : 'fall');
+      if (ok) l.h++;
+      else setTimeout(() => { l.h = 0; draw(); l.rider.classList.remove('fall'); }, 1000);
+    });
+    draw();
+  };
+  if (!still) setInterval(round, 2600);
+
+  // Aura vitrini
+  const show = [
+    ['gold', 'Altın Aura', 'Efsanevi'], ['void', 'Void Aura', 'Mitik'], ['galaxy', 'Galaksi', 'Mitik'],
+    ['celestial', 'Göksel', 'İlahi'], ['supernova', 'Süpernova', 'İlahi'], ['infinity', 'Sonsuzluk', 'Sonsuz'],
+  ];
+  const base = { color: '#8b6cff', shape: 'round', eyes: 'happy', mouth: 'smile', hat: '' };
+  document.getElementById('showcase').innerHTML = show.map(([aura, n, r]) =>
+    `<figure>${wrapAura({ ...base, aura }, img({ ...base, aura }))}<figcaption><b>${n}</b>${r}</figcaption></figure>`).join('');
+})();
+</script>
+</body>
+</html>
