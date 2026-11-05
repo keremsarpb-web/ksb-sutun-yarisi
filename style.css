@@ -488,3 +488,70 @@ input:focus, button:focus-visible { outline: 3px solid var(--brand); outline-off
 .icon-eternal { color: #fff; text-shadow: 0 0 8px #ff6b6b, 0 0 14px #4dabf7; }
 .divine-text { color: #e67700; }
 .eternal-text { background: linear-gradient(90deg, #f03e3e, #f59f00, #37b24d, #1c7ed6, #7048e8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ---------- Özel hesap tebriği ve Void Kutusu ---------- */
+.box-void { background: radial-gradient(circle at 35% 30%, #9d4edd, #240046 55%, #000 80%); box-shadow: 0 4px 0 #000, 0 0 14px #7b2cbf; color: #e0aaff; }
+.champion { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(16, 0, 43, .72); backdrop-filter: blur(3px); }
+.champion-card { width: min(100%, 420px); text-align: center; background: linear-gradient(160deg, #fff9db, #ffffff 45%); border: 3px solid #fcc419; border-radius: 22px; padding: 22px 18px; box-shadow: 0 0 0 6px rgba(252, 196, 25, .3), 0 20px 50px rgba(0, 0, 0, .35); animation: kuraWin .5s ease-out; }
+.champion-card h2 { font: 800 30px var(--display); margin: 4px 0 6px; color: #e67700; }
+.champion-card p { margin: 0 0 12px; }
+.champion-cup { font-size: 64px; line-height: 1; animation: champBounce 1.2s ease-in-out infinite; }
+.champion-box { margin: 6px auto 14px; cursor: default; animation: shake .6s ease-in-out infinite; }
+.champion-card .row { justify-content: center; }
+@keyframes champBounce { 50% { transform: translateY(-8px) rotate(-6deg); } }
+@media (prefers-reduced-motion: reduce) { .champion-cup, .champion-box { animation: none; } }
+
+/* ---------- Telefon ---------- */
+button, a, .swatch, .topic, .mcard { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.match > div { display: flex; flex-direction: column; }
+@media (max-width: 600px) {
+  .app { padding-top: max(10px, env(safe-area-inset-top)); gap: 10px; }
+  .logo { font-size: 26px; }
+  .top { gap: 8px; }
+  .chip { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: 6px 8px; border-radius: 16px; padding: 6px 12px; font-size: 14px; }
+  .chip > * { white-space: nowrap; }
+  .panel { padding: 14px; border-radius: 16px; }
+
+  /* lobi: önce oyna, sonra karakter */
+  .lobby > .col { order: -1; }
+  .stage-mini { height: 170px; }
+
+  /* maç: soru ve şıklar kaydırmadan görünür, emote'lar en altta */
+  .round { order: 1; font-size: 16px; margin-bottom: 6px; }
+  .arena { order: 2; height: 230px; padding: 0 4px 36px; border-radius: 16px; }
+  .arena::after { height: 36px; }
+  .match .timer { order: 3; margin-top: 6px; }
+  .match .qcard { order: 4; margin-top: 8px; padding: 12px; }
+  .match .emote-bar { order: 5; }
+  .match .row { order: 6; }
+  .arena .char.c3d { width: 48px; height: 53px; }
+  .arena .char:not(.c3d) { transform: scale(.82); transform-origin: 50% 100%; }
+  .sun { width: 38px; height: 38px; top: 12px; right: 14px; box-shadow: 0 0 0 7px rgba(255, 224, 102, .35); }
+  .arena-mark { font-size: 12px; }
+  .tag { bottom: -33px; font-size: 11px; }
+  .pillar .cap { top: -9px; height: 10px; }
+  .pillar .lvl { font-size: 11px; bottom: 2px; }
+  .answered { width: 22px; height: 22px; top: 6px; font-size: 13px; }
+  .emote-bubble { font-size: 22px; }
+  .qtext { font-size: 19px; margin-bottom: 10px; }
+  .match .opts { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .match .opt { font-size: 15px; padding: 10px 8px; gap: 6px; min-height: 52px; }
+  .match .opt .letter { width: 24px; height: 24px; font-size: 13px; }
+  .emote-btn { width: 40px; height: 40px; font-size: 20px; }
+  .countdown { font-size: 26px; }
+
+  /* sınav ve diğer ekranlar */
+  .opt { font-size: 16px; padding: 11px 10px; }
+  .exam-head .unit { width: 100%; order: 5; }
+  .big-coin { font-size: 20px; }
+  .shop-boxes { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .shop-item { padding: 8px 4px; }
+  .shop-item b { font-size: 13px; }
+  .shop-item .hint { font-size: 11px; }
+  .wheel-wrap { width: min(200px, 64vw); }
+  .champion-card h2 { font-size: 26px; }
+}
+@media (max-width: 360px) {
+  .match .opts { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) { .match-board > .btn { display: block; width: 100%; } .exam .row .btn, .match .row .btn { flex: 1 1 auto; } }

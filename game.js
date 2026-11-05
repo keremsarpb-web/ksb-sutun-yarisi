@@ -60,6 +60,7 @@ const AURA_BONUS = { common: 10, rare: 20, epic: 35, legendary: 50, mythic: 100,
 const BOX_KINDS = {
   classic: { n: 'Klasik Kutu', price: 100, d: 'Void %5 · İlahi/Sonsuz %1,5' },
   gold: { n: 'Altın Kutu', price: 300, d: 'Destansı+ %42 · Void %8 · İlahi/Sonsuz %3' },
+  void: { n: 'Void Kutusu', price: 0, d: 'Void Aura garanti' },
   cosmic: { n: 'Kozmik Kutu', price: 800, d: 'Destansı+ %80 · Void %15 · İlahi/Sonsuz %7' },
 };
 const WHEEL_INFO = {
@@ -186,6 +187,7 @@ function game() {
     token: (() => { try { return localStorage.getItem('sy_token') || ''; } catch { return ''; } })(),
     screen: 'loading', err: '',
     form: { name: '', class_name: '', class_password: '', display_name: '', username: '', password: '', password2: '', color: COLORS[5], shape: 'round', eyes: 'normal', mouth: 'smile', hat: '', aura: '' },
+    compact: false,
     me: null, boxes: [], owned: { hat: [], aura: [], emote: [], shape: [] }, board: [], boardStudents: [], boardTab: 'class',
     coins: 0, coinBonus: 0, freeSpin: false,
     queue: { count: 0, max: 5, start_in: null },
@@ -217,6 +219,9 @@ function game() {
       window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); this.installEvt = e; });
       window.addEventListener('appinstalled', () => { this.installEvt = null; });
       setInterval(() => { this.now = Date.now(); }, 200);
+      const mq = matchMedia('(max-width: 600px)');
+      this.compact = mq.matches;
+      mq.addEventListener('change', e => { this.compact = e.matches; });
       setInterval(() => { if (this.screen === 'queue' || this.screen === 'match') this.poll(); }, 900);
       if (!this.token) { this.screen = 'create'; return; }
       try {
@@ -236,6 +241,15 @@ function game() {
     applyProfile(r) {
       this.me = r.player; this.boxes = r.boxes; this.owned = r.owned;
       this.coins = r.coins ?? 0; this.coinBonus = r.coin_bonus ?? 0; this.freeSpin = !!r.free_spin;
+      if (r.champion) this.champion = true;
+    },
+
+    champion: false,
+
+    openChampionBox() {
+      this.champion = false;
+      const b = this.boxes.find(x => x.kind === 'void');
+      if (b) { this.screen = 'lobby'; this.$nextTick(() => document.querySelector('.boxes')?.scrollIntoView({ block: 'center' })); this.openBox(b.id); }
     },
 
     async loadMe() {
@@ -751,7 +765,8 @@ function game() {
 
     myP() { return this.m?.players.find(p => p.id === this.me?.id); },
     winner() { return this.m?.players.find(p => p.id === this.m.winner_id); },
-    pillarPx(id) { return 28 + Math.min(this.shown[id] || 0, 10) * 24; },
+    // Telefonda arena kısa: 10 kat sütun ekrana sığsın
+    pillarPx(id) { const h = Math.min(this.shown[id] || 0, 10); return this.compact ? 18 + h * 9 : 28 + h * 24; },
     secsLeft() { return Math.max(0, Math.ceil((this.localEnd - this.now) / 1000)); },
     progress() { return this.m ? Math.max(0, Math.min(1, (this.localEnd - this.now) / this.m.duration)) : 0; },
 

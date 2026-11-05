@@ -33,6 +33,7 @@ const BOXES = [
     'classic' => ['price' => 100, 'void' => 5,  'odds' => [4, 12, 30]],
     'gold'    => ['price' => 300, 'void' => 8,  'odds' => [12, 30, 40]],
     'cosmic'  => ['price' => 800, 'void' => 15, 'odds' => [35, 45, 20]],
+    'void'    => ['price' => 0,   'void' => 100, 'odds' => [35, 45, 20]], // satılmaz; Void Aura garanti
 ];
 // Özel auralar: her kutuda ayrı şansla (binde) çıkar, en değerliden başlanarak denenir.
 // Void'den değerliler: Göksel ve Süpernova (İlahi), Sonsuzluk (Sonsuz). Void'in %5'i korunur.
@@ -85,6 +86,9 @@ function migrate(): void
     }
     if (!q("SHOW COLUMNS FROM players LIKE 'class_id'")->fetch()) {
         q("ALTER TABLE players ADD COLUMN display_name VARCHAR(30) NOT NULL DEFAULT '', ADD COLUMN class_id INT NULL, ADD INDEX (class_id)");
+    }
+    if (!q("SHOW COLUMNS FROM players LIKE 'champion_gift'")->fetch()) {
+        q("ALTER TABLE players ADD COLUMN champion_gift TINYINT NOT NULL DEFAULT 0");
     }
     if (!q("SHOW COLUMNS FROM exams LIKE 'items'")->fetch()) {
         q("ALTER TABLE exams ADD COLUMN items MEDIUMTEXT NULL, ADD COLUMN coins INT NOT NULL DEFAULT 0, MODIFY subject VARCHAR(40) NOT NULL");
@@ -156,8 +160,22 @@ function class_by_id($id): array
     return $c;
 }
 
+// Özel hesaplar: ilk girişte "Tebrikler, 1. sensin!" mesajı ve bir kez Void Kutusu
+const CHAMPIONS = ['arden', 'alptuna'];
+
+function champion_gift(array $p): bool
+{
+    $names = [username_norm($p['name']), username_norm($p['display_name'] ?? '')];
+    if (!array_intersect($names, CHAMPIONS)) return false;
+    // Yalnızca bir istek kazanır; kutu bir kez verilir
+    if (q('UPDATE players SET champion_gift = 1 WHERE id = ? AND champion_gift = 0', [$p['id']])->rowCount() !== 1) return false;
+    q('INSERT INTO inventory (player_id, item_type, item_key) VALUES (?, ?, ?)', [$p['id'], 'box', 'void']);
+    return true;
+}
+
 function profile(array $p): array
 {
+    $gift = champion_gift($p);
     $rows = q('SELECT id, item_type, item_key FROM inventory WHERE player_id = ? ORDER BY id', [$p['id']])->fetchAll();
     $boxes = [];
     $owned = ['hat' => [], 'aura' => [], 'emote' => FREE_EMOTES, 'shape' => SHAPES];
@@ -171,7 +189,8 @@ function profile(array $p): array
         $player['class_name'] = $p['class_id'] ? (string) q('SELECT name FROM players WHERE id = ?', [$p['class_id']])->fetchColumn() : '';
     }
     return ['player' => $player, 'boxes' => $boxes, 'owned' => $owned, 'coins' => (int) ($p['coins'] ?? 0),
-        'coin_bonus' => coin_bonus((string) $p['aura']), 'free_spin' => ($p['last_spin'] ?? null) !== date('Y-m-d')];
+        'coin_bonus' => coin_bonus((string) $p['aura']), 'free_spin' => ($p['last_spin'] ?? null) !== date('Y-m-d'),
+        'champion' => $gift];
 }
 
 function owns(int $pid, string $type, string $key): bool
@@ -368,6 +387,11 @@ function roll_loot(int $pid, string $kind = 'classic'): array
 {
     $kind = box_kind($kind);
     $box = BOXES[$kind];
+    // Void Kutusu: Void Aura garanti; zaten varsa yerine 500 coin
+    if ($kind === 'void') {
+        $has = owns($pid, 'aura', 'void');
+        return ['rarity' => 'mythic', 'type' => 'aura', 'key' => 'void', 'duplicate' => $has, 'refund' => $has ? 500 : 0];
+    }
     // Özel auralar (Void dahil); sende olan atlanır ve kutu normal çekilişe döner
     foreach (SPECIAL_AURAS as [$key, $rarity, $chance]) {
         if (random_int(1, 1000) <= $chance[$kind] && !owns($pid, 'aura', $key)) {
@@ -496,7 +520,7 @@ try {
         case 'buy_box':
             $p = current_player($in);
             $kind = (string) ($in['kind'] ?? '');
-            if (!isset(BOXES[$kind])) fail('Böyle bir kutu yok');
+            if (!isset(BOXES[$kind]) || BOXES[$kind]['price'] <= 0) fail('Bu kutu satılmıyor');
             $price = BOXES[$kind]['price'];
             if (q('UPDATE players SET coins = coins - ? WHERE id = ? AND coins >= ?', [$price, $p['id'], $price])->rowCount() !== 1) fail('Yeterli coin yok');
             q('INSERT INTO inventory (player_id, item_type, item_key) VALUES (?, ?, ?)', [$p['id'], 'box', $kind === 'classic' ? '' : $kind]);

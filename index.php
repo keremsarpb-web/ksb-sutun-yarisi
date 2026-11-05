@@ -6,7 +6,7 @@ $v = '?v=' . APP_VERSION;
 <html lang="tr" data-version="<?= APP_VERSION ?>">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sütun Yarışı</title>
 <meta name="theme-color" content="#3a5bd9">
 <meta name="mobile-web-app-capable" content="yes">
@@ -44,6 +44,20 @@ $v = '?v=' . APP_VERSION;
   </header>
 
   <p class="error" x-show="err" x-text="err" @click="err=''"></p>
+
+  <!-- Özel hesaplara bir kerelik tebrik -->
+  <div class="champion" x-show="champion" x-transition.opacity role="dialog" aria-modal="true" aria-labelledby="champ-title" @keydown.escape.window="champion=false">
+    <div class="champion-card">
+      <div class="champion-cup">🏆</div>
+      <h2 id="champ-title">Tebrikler, 1. sensin!</h2>
+      <p>Sana özel bir <b class="void-text">Void Kutusu</b> verildi. İçinden Void Aura çıkacak!</p>
+      <div class="box box-void champion-box">?</div>
+      <div class="row">
+        <button class="btn primary big" @click="openChampionBox()">Kutuyu aç</button>
+        <button class="btn" @click="champion=false">Sonra</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Sınıf girişi / kaydı -->
   <section class="panel create" x-show="screen==='create'">
@@ -286,7 +300,7 @@ $v = '?v=' . APP_VERSION;
         </div>
         <p class="hint">Doğru cevap 10, eşleştirme 15, 10/10 bonusu 50, maç galibiyeti 100 coin. Takılı aura bunları artırır.</p>
         <div class="shop-boxes">
-          <template x-for="(b, k) in BOX_KINDS" :key="k">
+          <template x-for="[k, b] in Object.entries(BOX_KINDS).filter(([, b]) => b.price)" :key="k">
             <div class="shop-item">
               <div class="box mini" :class="'box-' + k">?</div>
               <b x-text="b.n"></b>
@@ -426,9 +440,9 @@ $v = '?v=' . APP_VERSION;
           <template x-if="winner()">
             <div>
               <div class="podium" x-html="charHtml(winner(), 'big')"></div>
-              <h2 x-text="winner().id===me?.id ? 'Sınıfınız turnuvayı kazandı!' : winner().name + ' kazandı!'"></h2>
-              <p x-show="winner().id===me?.id">Sınıfınıza ödül: <b>1 Mystery Box</b>. Lobide açabilirsiniz.</p>
-              <p x-show="winner().id!==me?.id">Bir dahaki maçta kutu sınıfınızın olabilir.</p>
+              <h2 x-text="winner().id===me?.id ? (me?.role==='student' ? 'Turnuvayı kazandın!' : 'Sınıfınız turnuvayı kazandı!') : winner().name + ' kazandı!'"></h2>
+              <p x-show="winner().id===me?.id">Ödül: <b>1 Mystery Box</b> ve coin. Lobide açabilirsin.</p>
+              <p x-show="winner().id!==me?.id">Bir dahaki maçta kutu senin olabilir.</p>
             </div>
           </template>
           <div class="row">

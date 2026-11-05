@@ -1,5 +1,5 @@
 // Uygulama kabuğunu önbelleğe alır; oyun verisi (api.php) her zaman sunucudan gelir.
-const CACHE = 'sutun-yarisi-v12';
+const CACHE = 'sutun-yarisi-v13';
 const SHELL = ['./', 'style.css', 'game.js', 'char3d.js', 'vendor/three.min.js', 'vendor/alpine.min.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
