@@ -1,0 +1,17 @@
+{
+  "name": "Sütun Yarışı",
+  "short_name": "Sütun Yarışı",
+  "description": "6. sınıf bilgi yarışması: doğru bil, sütununda yüksel!",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#cfe8ff",
+  "theme_color": "#3a5bd9",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
