@@ -2,6 +2,7 @@
 // Kayıtlar bu cihazda (localStorage) tutulur; maçlar bilgisayar oyuncularına karşı oynanır.
 window.LocalServer = (() => {
   const KEY = 'sy_web_save_v1';
+  const ME = 1; // bu cihazdaki oyuncu; odadaki arkadaşlar 2–5
   const TOKEN = 'web-oyuncu';
 
   // ---- Oyun kuralları (api.php ile aynı) ----
@@ -63,6 +64,7 @@ window.LocalServer = (() => {
     if (S) return S;
     try { S = JSON.parse(localStorage.getItem(KEY)) || null; } catch { S = null; }
     if (!S) S = { player: null, inv: [], nextId: 1, exams: [], recentQ: [], match: null, queue: null };
+    if (S.match?.players.some(p => p.remote)) S.match = null;
     return S;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
@@ -279,8 +281,8 @@ window.LocalServer = (() => {
     for (const p of alive) {
       if (p.answer === q[4]) {
         p.height++; p.last_result = 'correct'; p.result_q = qi;
-        if (!p.bot) addCoins(coinsFor(COIN_CORRECT, S.player.aura));
-        else if (Math.random() < 0.2) { p.emote = pick(FREE_EMOTES); p.emote_at = now(); }
+        if (p.id === ME) addCoins(coinsFor(COIN_CORRECT, S.player.aura));
+        else if (p.bot && Math.random() < 0.2) { p.emote = pick(FREE_EMOTES); p.emote_at = now(); }
       } else {
         let lives = p.lives - 1;
         if (lives < 1 && survivors === 0) lives = 1;
@@ -299,8 +301,8 @@ window.LocalServer = (() => {
     if (w.id === S.player.id) { S.player.wins = (S.player.wins || 0) + 1; addItem('box', ''); addCoins(coinsFor(COIN_WIN, S.player.aura)); }
   }
 
-  function matchState() {
-    const m = S.match, q = m.qs[m.q_index], me = m.players.find(p => !p.bot);
+  function matchState(viewer = ME) {
+    const m = S.match, q = m.qs[m.q_index], me = m.players.find(p => p.id === ME);
     const showQ = m.phase !== 'countdown';
     const reveal = m.phase === 'reveal' || m.phase === 'finished';
     const durations = { countdown: COUNTDOWN_MS, question: QUESTION_MS, reveal: REVEAL_MS, finished: 1 };
@@ -311,16 +313,17 @@ window.LocalServer = (() => {
       time_left: Math.max(0, m.ends - now()), duration: durations[m.phase],
       question: showQ ? { category: q[1], text: q[2], options: q[3] } : null,
       correct: reveal ? q[4] : null,
-      my_choice: me.answer,
+      my_choice: (m.players.find(p => p.id === viewer) || me).answer,
       players: m.players.map(p => ({
-        id: p.id, name: p.name, color: p.color, shape: p.shape, eyes: p.eyes, mouth: p.mouth, hat: p.hat, aura: p.aura,
+        id: swapId(p.id, viewer), name: p.name, color: p.color, shape: p.shape, eyes: p.eyes, mouth: p.mouth, hat: p.hat, aura: p.aura,
         wins: p.wins, games: p.games, needs_class: false, role: 'student',
         height: p.height, lives: p.lives, alive: p.alive, last_result: p.last_result, result_q: p.result_q,
         answered: p.answer !== null, emote: p.emote_at > now() - EMOTE_SHOW_MS ? p.emote : '', emote_at: p.emote_at,
       })),
-      winner_id: m.winner_id,
+      winner_id: m.winner_id === null ? null : swapId(m.winner_id, viewer),
     };
   }
+  const swapId = (id, viewer) => (id === viewer ? ME : id === ME ? viewer : id);
 
   // ---- istekler ----
   const actions = {
@@ -406,7 +409,7 @@ window.LocalServer = (() => {
       if (!m) fail('Maçta değilsin');
       tick();
       if (m.phase !== 'question') fail('Şu an cevap verilemez');
-      const me = m.players.find(p => !p.bot);
+      const me = m.players.find(p => p.id === ME);
       if (!me.alive) fail('Elendin, izlemeye devam edebilirsin');
       const c = Number(b.choice);
       if (!(c >= 0 && c <= 3)) fail('Geçersiz seçenek');
@@ -419,7 +422,7 @@ window.LocalServer = (() => {
       const m = S.match;
       if (!m) fail('Maçta değilsin');
       if (!FREE_EMOTES.includes(b.key) && !owns('emote', b.key)) fail('Bu emote sende yok');
-      const me = m.players.find(p => !p.bot);
+      const me = m.players.find(p => p.id === ME);
       if (me.emote_at >= now() - EMOTE_COOLDOWN_MS) return { ok: false };
       me.emote = b.key; me.emote_at = now(); save();
       return { ok: true };
@@ -427,7 +430,7 @@ window.LocalServer = (() => {
     leave_match() {
       P();
       const m = S.match;
-      if (m && m.phase !== 'finished') { const me = m.players.find(p => !p.bot); me.lives = 0; me.alive = false; S.player.games++; }
+      if (m && m.phase !== 'finished') { const me = m.players.find(p => p.id === ME); me.lives = 0; me.alive = false; S.player.games++; }
       S.match = null; save();
       return { ok: true };
     },
@@ -497,6 +500,53 @@ window.LocalServer = (() => {
     },
   };
 
+  // ---- Oda (online): bu cihaz oda sahibiyse maçı yönetir ----
+  const room = {
+    start(guests) {
+      load(); P();
+      const recent = new Set(S.recentQ);
+      let pool = shuffle(DATA.questions.filter(x => !recent.has(x[0])));
+      if (pool.length < QUESTIONS_PER_MATCH) pool = shuffle([...DATA.questions]);
+      const qs = pool.slice(0, QUESTIONS_PER_MATCH);
+      S.recentQ = [...S.recentQ, ...qs.map(x => x[0])].slice(-40);
+      const mk = (p, extra) => ({ id: p.id, name: p.name, color: p.color, shape: p.shape, eyes: p.eyes, mouth: p.mouth, hat: p.hat, aura: p.aura,
+        wins: p.wins || 0, games: p.games || 0, bot: false, skill: 0, height: 0, lives: START_LIVES, alive: true,
+        last_result: '', result_q: -1, answer: null, answerAt: 0, emote: '', emote_at: 0, ...extra });
+      S.queue = null;
+      S.match = { id: now(), qs, q_index: 0, phase: 'countdown', ends: now() + COUNTDOWN_MS, room: true, winner_id: null,
+        players: [mk(S.player), ...guests.map((g, i) => mk({ ...g, id: i + 2 }, { remote: true, peer: g.peer }))] };
+      save();
+      return S.match.players.filter(p => p.remote).map(p => ({ id: p.id, peer: p.peer }));
+    },
+    // Konuğun cevabı ve emote'u
+    answer(id, choice) {
+      const m = S.match; if (!m) return;
+      tick();
+      const p = m.players.find(x => x.id === id);
+      if (m.phase === 'question' && p && p.alive && p.answer === null && choice >= 0 && choice <= 3) p.answer = choice;
+      tick(); save();
+    },
+    emote(id, key) {
+      const p = S.match?.players.find(x => x.id === id);
+      if (p && typeof key === 'string' && key.length < 16 && p.emote_at < now() - EMOTE_COOLDOWN_MS) { p.emote = key; p.emote_at = now(); save(); }
+    },
+    leave(id) {
+      const m = S.match, p = m?.players.find(x => x.id === id);
+      if (p && m.phase !== 'finished') { p.lives = 0; p.alive = false; tick(); save(); }
+    },
+    state(id) { if (!S.match) return null; tick(); save(); return JSON.parse(JSON.stringify(matchState(id))); },
+    active: () => !!S?.match?.room && S.match.phase !== 'finished',
+    // Konuk tarafı: oda sahibinin yönettiği maçtan kendi ödüllerini bu cihaza yazar
+    reward(kind) {
+      load(); P();
+      if (kind === 'correct') addCoins(coinsFor(COIN_CORRECT, S.player.aura));
+      else if (kind === 'played') S.player.games++;
+      else if (kind === 'win') { S.player.wins++; addItem('box', ''); addCoins(coinsFor(COIN_WIN, S.player.aura)); }
+      save();
+    },
+    profile: () => (load(), S.player ? { ...publicPlayer(S.player) } : null),
+  };
+
   async function handle(action, body = {}) {
     await ready;
     load();
@@ -505,5 +555,5 @@ window.LocalServer = (() => {
     return JSON.parse(JSON.stringify(fn(body || {})));
   }
 
-  return { handle, hasPlayer: () => !!load().player, TOKEN, ApiError };
+  return { handle, hasPlayer: () => !!load().player, TOKEN, ApiError, room, ready };
 })();

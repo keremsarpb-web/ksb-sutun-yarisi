@@ -2,3 +2,20 @@
 .create .tabs, .chip .linkbtn { display: none !important; }
 .web-bar { text-align: center; font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, .7); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; justify-self: center; }
 .web-bar a { color: var(--brand); font-weight: 700; }
+
+/* Arkadaşlarla oyna (online oda) */
+.room-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.room-actions .or { color: var(--muted); font-weight: 700; font-size: 14px; }
+.room-code-in { width: 6.5em; font: 800 20px var(--display); letter-spacing: .14em; text-transform: uppercase; text-align: center; padding: 6px 8px; border-radius: 12px; border: 2px solid var(--line); }
+.room-code { font-weight: 700; color: var(--muted); }
+.room-code b { display: inline-block; margin-left: 6px; font: 800 30px var(--display); letter-spacing: .16em; color: var(--brand); background: var(--sky-2); border: 2px dashed var(--brand); border-radius: 12px; padding: 0 12px; }
+.room-players { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.room-players li { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.room-players .dot { width: 14px; height: 14px; border-radius: 50%; }
+.room-players small { color: var(--muted); font-weight: 600; }
+
+/* Uygulama olarak yükle */
+.web-install { margin-left: 8px; border: 0; background: var(--brand); color: #fff; font: 700 13px var(--body); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.web-tip { justify-self: center; max-width: 520px; margin: 0; background: #fff4d6; border: 2px solid #ffd977; border-radius: 14px; padding: 8px 12px; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; }
+/* Ana ekrandan açılınca çentik ve alt çubuk için boşluk */
+@media (display-mode: standalone) { .app { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(40px, env(safe-area-inset-bottom)); } }

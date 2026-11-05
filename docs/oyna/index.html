@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sütun Yarışı – Tarayıcıda oyna</title>
 <link rel="canonical" href="https://keremsarpb-web.github.io/ksb-sutun-yarisi/oyna/">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="application-name" content="Sütun Yarışı">
 <meta name="theme-color" content="#3a5bd9">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sütun Yarışı">
+<link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -43,7 +46,8 @@
     </template>
   </header>
 
-  <div class="web-bar">Tarayıcı sürümü · ilerlemen bu cihazda kaydedilir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a></div>
+  <div class="web-bar">Tarayıcı sürümü · ilerlemen bu cihazda kaydedilir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
+  <p class="web-tip" x-show="installTip" x-text="installTip" @click="installTip=''" role="status"></p>
 
   <p class="error" x-show="err" x-text="err" @click="err=''"></p>
 
@@ -245,6 +249,37 @@
         <h2>Turnuva maçı</h2>
         <p>Bilgisayar oyuncularına karşı 2–5 kişilik maç, 10 soru. Doğru bilen sütununda yükselir, yanlış bilen düşer ve 1 can kaybeder. 3 canı biten elenir. En yüksekte kalan kazanır ve <b>Mystery Box</b> alır.</p>
         <button class="btn primary big" @click="findMatch()">Rastgele maç bul</button>
+      </div>
+
+      <div class="panel room">
+        <h2>Arkadaşlarla oyna <span class="count small">online</span></h2>
+        <template x-if="!room.mode">
+          <div>
+            <p>Oda kur, kodu arkadaşlarına söyle; onlar kendi telefon ya da bilgisayarlarından bu sayfayı açıp katılsın. 2–5 kişi.</p>
+            <div class="room-actions">
+              <button class="btn primary" @click="roomCreate()" :disabled="room.busy">Oda kur</button>
+              <span class="or">ya da</span>
+              <input class="room-code-in" maxlength="5" x-model="room.joinCode" placeholder="KOD" autocapitalize="characters" autocomplete="off" @keydown.enter="roomJoin()" aria-label="Oda kodu">
+              <button class="btn" @click="roomJoin()" :disabled="room.busy">Katıl</button>
+            </div>
+            <p class="hint" x-show="room.busy">Bağlanıyor…</p>
+          </div>
+        </template>
+        <template x-if="room.mode">
+          <div>
+            <div class="room-code">Oda kodu <b x-text="room.code"></b></div>
+            <ul class="room-players">
+              <template x-for="p in room.players" :key="p.peer">
+                <li><span class="dot" :style="'background:' + p.color"></span><span x-text="p.name"></span><small x-show="p.host">oda sahibi</small></li>
+              </template>
+            </ul>
+            <p class="hint" x-text="room.status"></p>
+            <div class="room-actions">
+              <button class="btn primary" x-show="room.mode==='host'" @click="roomStart()" :disabled="room.players.length < 2">Maçı başlat</button>
+              <button class="btn" @click="roomClose()" x-text="room.mode==='host' ? 'Odayı kapat' : 'Odadan çık'"></button>
+            </div>
+          </div>
+        </template>
       </div>
 
       <div class="panel prep">
