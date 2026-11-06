@@ -21,6 +21,11 @@ Okullar için 6. sınıf bilgi yarışması. 2–5 oyuncu rastgele eşleşir. Do
   - Adil kura çekme (her ismin şansı eşit).
 - PWA olarak yüklenebilir; güncellemeleri kendisi bildirir.
 
+## İndir ya da indirmeden oyna
+
+- **Tarayıcıda oyna:** https://keremsarpb-web.github.io/ksb-sutun-yarisi/oyna/ (telefon ve bilgisayar; uygulama olarak yüklenebilir)
+- **Okul sürümü, kurulumsuz (Windows):** [SutunYarisi-Okul-v1.9.1.zip](https://github.com/keremsarpb-web/ksb-sutun-yarisi/releases/download/v1.9.1/SutunYarisi-Okul-v1.9.1.zip). Çıkar, `BASLAT.bat`'a çift tıkla; ilk iş `OGRETMEN-SIFRE.bat` ile öğretmen şifresini belirle.
+
 ## Kurulum (XAMPP)
 
 > Oyun PHP ve MySQL ile çalışır. Bu yüzden GitHub Pages gibi düz HTML barındıran yerlerde çalışmaz. Kendi bilgisayarınızda ya da okul sunucusunda çalıştırın.
