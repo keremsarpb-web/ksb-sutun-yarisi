@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr" data-version="1.9.2">
+<html lang="tr" data-version="1.9.3">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,16 +16,19 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=1.9.2">
-<script src="vendor/three.min.js?v=1.9.2"></script>
-<script src="game.js?v=1.9.2"></script>
-<script src="char3d.js?v=1.9.2"></script>
-<script src="matematik.js?v=1.9.2"></script>
-<script src="cloud.js?v=1.9.2"></script>
-<script src="server.js?v=1.9.2"></script>
-<script src="web.js?v=1.9.2"></script>
-<link rel="stylesheet" href="web.css?v=1.9.2">
-<script defer src="vendor/alpine.min.js?v=1.9.2"></script>
+<link rel="stylesheet" href="style.css?v=1.9.3">
+<script src="vendor/three.min.js?v=1.9.3"></script>
+<script src="game.js?v=1.9.3"></script>
+<script src="char3d.js?v=1.9.3"></script>
+<script src="matematik.js?v=1.9.3"></script>
+<script src="cloud.js?v=1.9.3"></script>
+<script src="server.js?v=1.9.3"></script>
+<script src="web.js?v=1.9.3"></script>
+<script src="world3d.js?v=1.9.3"></script>
+<script src="world.js?v=1.9.3"></script>
+<link rel="stylesheet" href="web.css?v=1.9.3">
+<link rel="stylesheet" href="world.css?v=1.9.3">
+<script defer src="vendor/alpine.min.js?v=1.9.3"></script>
 </head>
 <body>
 <div class="app" x-data="game()" x-init="init()" x-cloak>
@@ -262,6 +265,12 @@
         <h2>Turnuva maçı</h2>
         <p>Bilgisayar oyuncularına karşı 2–5 kişilik maç, 10 soru. Doğru bilen sütununda yükselir, yanlış bilen düşer ve 1 can kaybeder. 3 canı biten elenir. En yüksekte kalan kazanır ve <b>Mystery Box</b> alır.</p>
         <button class="btn primary big" @click="findMatch()">Rastgele maç bul</button>
+      </div>
+
+      <div class="panel village-cta">
+        <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
+        <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
+        <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
       </div>
 
       <div class="panel room">
@@ -839,9 +848,65 @@
     </template>
   </section>
 
+  <!-- Köyüm: herkesin aynı dünyada köy kurduğu harita (online sürüm) -->
+  <section class="world" x-show="screen==='world'" x-cloak>
+    <div class="world-bar">
+      <button class="btn small" @click="closeWorld()">← Lobi</button>
+      <div class="world-modes" role="group" aria-label="Mod">
+        <button class="pill" :class="world.mode==='walk' && 'on'" @click="world.mode='walk'; world.sel=null">🚶 Gez</button>
+        <button class="pill" :class="world.mode==='build' && 'on'" @click="world.mode='build'">🔨 Kur</button>
+      </div>
+      <button class="btn small" @click="centerOn(world.mine?.plot, world.mine?.pos)">🏠 Köyüme git</button>
+      <select class="world-visit" @change="visitVillage($event.target.value); $event.target.value=''" aria-label="Bir köyü ziyaret et">
+        <option value="">👀 Köy gez…</option>
+        <template x-for="v in world.villages" :key="v.uid"><option :value="v.plot" x-text="(isOnline(v) ? '🟢 ' : '') + v.name + (v.className ? ' · ' + v.className : '')"></option></template>
+      </select>
+      <span class="world-zoom"><button class="btn small" @click="zoomBy(0.8)" aria-label="Uzaklaş">−</button><button class="btn small" @click="zoomBy(1.25)" aria-label="Yakınlaş">+</button></span>
+      <span class="coin-chip"><i>🪙</i><b x-text="coins"></b></span>
+      <button class="btn small primary" @click="collectIncome()" :disabled="!world.income" x-text="'Kazancı topla +' + world.income" :title="'Saatte ' + (world.perHour || 0) + ' coin, en fazla 12 saat birikir'"></button>
+    </div>
+    <p class="world-msg" x-show="world.msg" x-text="world.msg" @click="world.msg=''"></p>
+
+    <div class="world-shop" x-show="world.mode==='build'">
+      <div class="pills">
+        <template x-for="c in WORLD_CATS" :key="c">
+          <button class="pill" :class="world.cat===c && 'on'" @click="world.cat=c" x-text="c[0].toLocaleUpperCase('tr') + c.slice(1)"></button>
+        </template>
+      </div>
+      <div class="shop-row">
+        <template x-for="[k, it] in worldItemsIn(world.cat)" :key="k">
+          <button class="bld-pick" :class="[world.pick===k && 'on', coins < it[2] && 'poor']" @click="world.pick=k">
+            <span class="e" x-text="it[1]"></span><b x-text="it[0]"></b>
+            <small x-text="'🪙 ' + it[2] + (it[3] ? ' · +' + it[3] + '/sa' : '')"></small>
+          </button>
+        </template>
+      </div>
+      <p class="hint">Yeşil kenarlı arsa senin. Boş bir kareye tıkla, seçtiğin yapı kurulsun. Bir yapıya tıklayınca satabilirsin (fiyatının yarısı geri gelir).</p>
+    </div>
+
+    <!-- 3D dünya (world3d.js çizer); x-effect değişen her şeyi sahneye yansıtır -->
+    <div class="world-view w3d" x-effect="screen==='world' && worldSync()">
+      <div class="w3d-labels" aria-hidden="true"></div>
+      <div class="w3d-ctrl">
+        <button class="btn small" @click="rotateWorld(-1)" aria-label="Sola döndür">⟲</button>
+        <button class="btn small" @click="rotateWorld(1)" aria-label="Sağa döndür">⟳</button>
+      </div>
+    </div>
+
+    <template x-if="world.sel">
+      <div class="world-sel">
+        <span class="e" x-text="WORLD_ITEMS[world.sel.key][1]"></span>
+        <div><b x-text="WORLD_ITEMS[world.sel.key][0]"></b><small x-text="WORLD_ITEMS[world.sel.key][3] ? 'Saatte +' + WORLD_ITEMS[world.sel.key][3] + ' coin kazandırır' : 'Süs ve yaşam alanı'"></small></div>
+        <button class="btn small" @click="sellSelected()" x-text="'Sat (+' + Math.floor(WORLD_ITEMS[world.sel.key][2] / 2) + ')'"></button>
+        <button class="btn small" @click="world.sel=null">Kapat</button>
+      </div>
+    </template>
+    <p class="hint world-help">Sürükleyerek dünyayı gez, tekerlek ya da iki parmakla yakınlaş, ⟲ ⟳ ile döndür. Gez modunda kendi köyünde bir kareye tıkla ya da ok tuşlarıyla yürü. Yeşil nokta şu an oyunda olanları gösterir.</p>
+  </section>
+
   <section class="panel" x-show="screen==='loading'"><div class="spinner"></div></section>
 </div>
-<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.2</div>
+<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.3</div>
 <div class="update-bar" x-data x-show="$store.update.ready" x-cloak>
   <span>Yeni güncelleme hazır: <b x-text="'v' + $store.update.version"></b></span>
   <button class="btn small" @click="location.reload()">Şimdi güncelle</button>

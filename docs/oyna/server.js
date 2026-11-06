@@ -111,6 +111,17 @@ window.LocalServer = (() => {
     }
     try { localStorage.setItem(SAVE_KEY(curId), JSON.stringify(S)); } catch {}
   }
+  // İşletmelerin saatlik kazancı; en fazla 12 saat birikir
+  function collectVillage() {
+    const v = S.village;
+    if (!v) return 0;
+    const perHour = Object.values(v.tiles).reduce((sum, k) => sum + (window.WORLD_ITEMS?.[k]?.[3] || 0), 0);
+    const hours = Math.min(WORLD.MAX_HOURS, Math.max(0, (now() - (v.lastCollect || now())) / 3600000));
+    const gained = Math.floor(perHour * hours);
+    v.lastCollect = now();
+    addCoins(gained);
+    return gained;
+  }
   // Admin paneli: sunucudaki "kerem" öğrenci hesabı (Firestore kuralı da yalnızca ona izin verir)
   const ADMINS = ['kerem'];
   const isAdmin = () => { const a = account(); return !!a?.cloud && a.role === 'student' && ADMINS.includes(a.login); };
@@ -502,6 +513,53 @@ window.LocalServer = (() => {
       return { token: a.id };
     },
     async me() { P(); await syncDown(); return profile(); },
+    // ---- Köyüm: kendi köyün kayıtta, herkesin göreceği kopyası Firestore'da ----
+    village_get() { P(); return { village: S.village || null }; },
+    village_init(b) {
+      P();
+      if (!account()?.cloud) fail('Köy kurmak için online hesabınla giriş yapmalısın');
+      if (!S.village) S.village = { plot: Number(b.plot) | 0, tiles: {}, pos: { x: 3, y: 3 }, lastCollect: now() };
+      save();
+      return { village: S.village };
+    },
+    village_build(b) {
+      const p = P(), v = S.village, it = window.WORLD_ITEMS?.[b.key];
+      if (!v) fail('Önce köyünü aç');
+      if (!it) fail('Böyle bir yapı yok');
+      const x = Number(b.x), y = Number(b.y), k = x + '_' + y;
+      if (!(x >= 0 && x < WORLD.PLOT && y >= 0 && y < WORLD.PLOT)) fail('Kendi arsanın içine kurabilirsin');
+      if (v.tiles[k]) fail('Burası dolu');
+      if (p.coins < it[2]) fail(`${it[0]} için ${it[2]} coin gerek`);
+      // Kazancı yeni işletmeden önce topla ki saat sıfırlanmasın
+      collectVillage();
+      p.coins -= it[2]; v.tiles[k] = b.key;
+      save();
+      return { village: v, ...profile() };
+    },
+    village_sell(b) {
+      P();
+      const v = S.village, k = Number(b.x) + '_' + Number(b.y), key = v?.tiles[k];
+      if (!key) fail('Burada yapı yok');
+      collectVillage();
+      const refund = Math.floor((window.WORLD_ITEMS[key]?.[2] || 0) / 2);
+      delete v.tiles[k]; addCoins(refund);
+      save();
+      return { village: v, refund, ...profile() };
+    },
+    village_collect() {
+      P();
+      if (!S.village) fail('Önce köyünü aç');
+      const gained = collectVillage();
+      save();
+      return { village: S.village, gained, ...profile() };
+    },
+    village_move(b) {
+      P();
+      const v = S.village, x = Number(b.x), y = Number(b.y);
+      if (!v || !(x >= 0 && x < WORLD.PLOT && y >= 0 && y < WORLD.PLOT)) fail('Oraya gidilemez');
+      v.pos = { x, y }; save();
+      return { village: v };
+    },
     async admin_list() {
       P(); if (!isAdmin()) fail('Bu işlem yalnızca admin içindir');
       await CloudSync.flush();

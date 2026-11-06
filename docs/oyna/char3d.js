@@ -302,5 +302,6 @@ window.Char3D = (() => {
     }
   }
 
-  return { image, preview };
+  // model: köy dünyası gibi başka 3D sahnelere konacak karakter
+  return { image, preview, model: p => build(p), dispose: disposeTree };
 })();

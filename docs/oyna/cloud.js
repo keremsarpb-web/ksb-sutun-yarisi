@@ -153,5 +153,39 @@ window.CloudSync = (() => {
     }, () => {});
   }
 
-  return { adminList, adminGive, watchGifts, ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
+  // ---- Ortak dünya (Köyüm) ----
+  // Her oyuncuya sırayla bir arsa numarası verilir (sayaç işlemle bir artar)
+  async function worldAllocPlot() {
+    const { db, auth } = await ready();
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Köy için online hesabınla giriş yapmalısın');
+    const mine = await db.collection('world').doc(uid).get();
+    if (mine.exists && Number.isInteger(mine.data().plot)) return mine.data().plot;
+    const ref = db.collection('worldMeta').doc('plots');
+    return db.runTransaction(async tx => {
+      const d = await tx.get(ref);
+      const n = d.exists ? d.data().next : 0;
+      if (d.exists) tx.update(ref, { next: n + 1 }); else tx.set(ref, { next: 1 });
+      return n;
+    });
+  }
+  // Köyün herkese açık kopyası; heartbeat yalnızca "çevrimiçi" zamanını tazeler
+  async function worldPublish(doc, heartbeat) {
+    const { db, auth } = await ready();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const ref = db.collection('world').doc(uid);
+    if (heartbeat) await ref.set({ pos: doc.pos, lastSeen: Date.now() }, { merge: true });
+    else await ref.set({ ...doc, lastSeen: Date.now(), updatedAt: Date.now() });
+  }
+  // Bütün köyleri canlı izler (biri bir şey kurunca harita güncellenir)
+  async function worldWatch(cb) {
+    const { db, auth } = await ready();
+    const me = auth.currentUser?.uid;
+    return db.collection('world').onSnapshot(snap => {
+      cb(snap.docs.filter(d => d.id !== me).map(d => ({ uid: d.id, ...d.data() })).filter(v => Number.isInteger(v.plot)));
+    }, () => {});
+  }
+
+  return { worldAllocPlot, worldPublish, worldWatch, adminList, adminGive, watchGifts, ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
 })();
