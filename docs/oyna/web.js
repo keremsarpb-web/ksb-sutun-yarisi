@@ -25,7 +25,10 @@
     // Oda bağlantıları reaktif olmasın diye Alpine'in dışında tutulur
     const net = { peer: null, conns: new Map(), host: null, loop: 0, guestState: null, rewarded: {} };
 
+    const baseLogout = g.logout;
     Object.assign(g, {
+      // Çıkışta sunucu oturumu da kapanır; kayıt önce sunucuya gönderilir
+      async logout() { await window.CloudSync?.signOut(); return baseLogout.call(this); },
       // Oturum: okul sürümü gibi sy_token; hesap bu cihazda yoksa giriş ekranı
       token: (() => { const n = LocalServer.accountCount(); let t = ''; try { t = localStorage.getItem('sy_token') || ''; } catch {} return n && LocalServer.hasAccount(t) ? t : ''; })(),
       authTab: LocalServer.accountCount() ? 'login' : 'student',

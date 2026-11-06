@@ -29,12 +29,11 @@ rep('<title>Sütun Yarışı</title>', '<title>Sütun Yarışı – Tarayıcıda
     '<meta name="apple-mobile-web-app-status-bar-style" content="default">\n<meta name="application-name" content="Sütun Yarışı">')
 # Yerel sunucu, oyun kodundan sonra ve Alpine başlamadan yüklenir
 rep(f'<script src="char3d.js?v={version}"></script>',
-    f'<script src="char3d.js?v={version}"></script>\n<script src="matematik.js?v={version}"></script>\n<script src="server.js?v={version}"></script>\n<script src="web.js?v={version}"></script>\n<link rel="stylesheet" href="web.css?v={version}">')
+    f'<script src="char3d.js?v={version}"></script>\n<script src="matematik.js?v={version}"></script>\n<script src="cloud.js?v={version}"></script>\n<script src="server.js?v={version}"></script>\n<script src="web.js?v={version}"></script>\n<link rel="stylesheet" href="web.css?v={version}">')
 
-# Giriş: okul sürümündeki sekmeler aynen; hesaplar bu cihazda saklanır
+# Giriş: okul sürümündeki sekmeler aynen; hesaplar sunucuda (Firebase), her cihazdan girilir
 rep('<p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur.</p>',
-    '<p class="hint">Sınıfının adını yaz. Sınıfın bu cihazda kayıtlıysa sınıf şifresi de sorulur. Hesabın bu cihazda, bu tarayıcıda saklanır.</p>')
-rep('<label for="st-cpass">Sınıf şifresi</label>', '<label for="st-cpass">Sınıf şifresi <small>(varsa)</small></label>')
+    '<p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur. Hesabınla her cihazdan girebilirsin.</p>')
 
 # Lobi metinleri
 rep('<p>2–5 oyuncu, 10 soru. ', '<p>Bilgisayar oyuncularına karşı 2–5 kişilik maç, 10 soru. ')
@@ -78,7 +77,7 @@ rep("""        <button class="btn primary big" @click="findMatch()">Rastgele ma�
 """)
 
 # Üst bilgi şeridi
-rep('  <p class="error" x-show="err"', """  <div class="web-bar">Tarayıcı sürümü · ilerlemen bu cihazda kaydedilir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
+rep('  <p class="error" x-show="err"', """  <div class="web-bar">Tarayıcı sürümü · hesabınla her cihazdan gir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
   <p class="web-tip" x-show="installTip" x-text="installTip" @click="installTip=''" role="status"></p>
 
   <p class="error" x-show="err\"""")

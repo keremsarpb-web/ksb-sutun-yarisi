@@ -21,6 +21,7 @@
 <script src="game.js?v=1.9.1"></script>
 <script src="char3d.js?v=1.9.1"></script>
 <script src="matematik.js?v=1.9.1"></script>
+<script src="cloud.js?v=1.9.1"></script>
 <script src="server.js?v=1.9.1"></script>
 <script src="web.js?v=1.9.1"></script>
 <link rel="stylesheet" href="web.css?v=1.9.1">
@@ -46,7 +47,7 @@
     </template>
   </header>
 
-  <div class="web-bar">Tarayıcı sürümü · ilerlemen bu cihazda kaydedilir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
+  <div class="web-bar">Tarayıcı sürümü · hesabınla her cihazdan gir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
   <p class="web-tip" x-show="installTip" x-text="installTip" @click="installTip=''" role="status"></p>
 
   <p class="error" x-show="err" x-text="err" @click="err=''"></p>
@@ -90,14 +91,14 @@
     </div>
     <template x-if="authTab==='student'">
       <div>
-        <p class="hint">Sınıfının adını yaz. Sınıfın bu cihazda kayıtlıysa sınıf şifresi de sorulur. Hesabın bu cihazda, bu tarayıcıda saklanır.</p>
+        <p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur. Hesabınla her cihazdan girebilirsin.</p>
         <div class="pair">
           <div>
             <label for="st-class">Sınıfın</label>
             <input id="st-class" maxlength="16" x-model="form.class_name" placeholder="ör. 6-A">
           </div>
           <div>
-            <label for="st-cpass">Sınıf şifresi <small>(varsa)</small></label>
+            <label for="st-cpass">Sınıf şifresi</label>
             <input id="st-cpass" type="password" x-model="form.class_password" autocomplete="off">
           </div>
         </div>

@@ -94,7 +94,37 @@ window.LocalServer = (() => {
     if (S.match?.players.some(p => p.remote)) S.match = null;
     return S;
   }
-  function save() { if (account()) try { localStorage.setItem(SAVE_KEY(curId), JSON.stringify(S)); } catch {} }
+  const publicInfo = p => ({ name: p.name, role: p.role, className: p.className || '', color: p.color, shape: p.shape, eyes: p.eyes,
+    mouth: p.mouth, hat: p.hat || '', aura: p.aura || '', wins: p.wins | 0, games: p.games | 0 });
+  const pushed = {}; // hesap -> sunucuya en son gönderilen kayıt (maç anlık durumu hariç)
+  function save() {
+    const a = account();
+    if (!a) return;
+    // Maçın anlık durumu sunucuya gitmez; yalnızca coin, kutu, kozmetik ve sonuç gibi değişiklikler gider
+    const durable = JSON.stringify({ ...S, match: null, queue: null, updatedAt: 0 });
+    if (durable !== pushed[curId]) {
+      S.updatedAt = now();
+      if (a.cloud && window.CloudSync && S.player && pushed[curId] !== undefined) {
+        CloudSync.schedulePush(curId, { login: a.login, role: a.role, cls: a.cls }, { ...S, match: null, queue: null }, publicInfo(S.player));
+      }
+      pushed[curId] = durable;
+    }
+    try { localStorage.setItem(SAVE_KEY(curId), JSON.stringify(S)); } catch {}
+  }
+  // Başka cihazda oynandıysa sunucudaki daha yeni kaydı al (oturum başına bir kez)
+  const synced = {};
+  async function syncDown() {
+    const a = account();
+    if (!a?.cloud || synced[curId] || !window.CloudSync) return;
+    synced[curId] = true;
+    try {
+      const d = await CloudSync.pull(curId);
+      const remote = d?.save ? JSON.parse(d.save) : null;
+      load();
+      if (remote && (remote.updatedAt || 0) > (S.updatedAt || 0)) { S = { ...remote, match: null, queue: null }; }
+      pushed[curId] = JSON.stringify({ ...S, match: null, queue: null, updatedAt: 0 });
+    } catch { synced[curId] = false; }
+  }
   const P = () => { const p = account() && load().player; if (!p) fail('Oturum bulunamadı', 401); return p; };
 
   // "6 a", "6-a " -> "6-A" (api.php class_name ile aynı)
@@ -113,10 +143,11 @@ window.LocalServer = (() => {
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   }
   const newSalt = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, '0')).join('');
-  async function createAccount(login, role, cls, password, look, name, display) {
-    const id = 'h' + now().toString(36) + Math.floor(Math.random() * 1000);
+  async function createAccount(login, role, cls, password, look, name, display, uid) {
+    const id = uid || 'h' + now().toString(36) + Math.floor(Math.random() * 1000);
     const salt = newSalt();
-    accounts.push({ id, login, role, cls, salt, hash: await hashPass(password, salt) });
+    accounts = accounts.filter(a => a.login !== login);
+    accounts.push({ id, login, role, cls, salt, hash: await hashPass(password, salt), cloud: !!uid });
     saveAccounts();
     curId = id; S = null; load();
     S.player = { id: 1, name: display || name, username: role === 'student' ? login : '', className: cls, role,
@@ -124,7 +155,9 @@ window.LocalServer = (() => {
       shape: SHAPE_KEYS.includes(look.shape) ? look.shape : 'round', eyes: EYE_KEYS.includes(look.eyes) ? look.eyes : 'normal',
       mouth: MOUTH_KEYS.includes(look.mouth) ? look.mouth : 'smile', hat: '', aura: '', wins: 0, games: 0, coins: 0, lastSpin: null, championGift: false };
     addItem('box', ''); // hoş geldin kutusu
+    pushed[id] = '';
     save();
+    if (uid) await CloudSync.flush();
     return { token: id };
   }
   const owns = (type, key) => S.inv.some(i => i.type === type && i.key === key);
@@ -387,39 +420,72 @@ window.LocalServer = (() => {
 
   // ---- istekler ----
   const actions = {
-    // Yeni sınıf kaydet
+    // Yeni sınıf kaydet (sunucuda)
     async register(b) {
       const name = className(b.name);
       if (name.length < 2) fail('Sınıf adı en az 2 karakter olmalı (ör. 6-A)');
       const password = String(b.password || '');
       if (password.length < 4) fail('Sınıf şifresi en az 4 karakter olmalı');
-      if (accounts.some(a => a.login === name || a.login === usernameNorm(name))) fail('Bu sınıf bu cihazda zaten kayıtlı. "Giriş yap" sekmesinden sınıf şifresiyle gir.');
-      return createAccount(name, 'class', '', password, b, name);
+      const exists = 'Bu sınıf zaten kayıtlı. "Giriş yap" sekmesinden sınıf şifresiyle gir.';
+      if (await cloud(() => CloudSync.getClass(name))) fail(exists);
+      const uid = await cloud(() => CloudSync.signUp(CloudSync.emailFor('class', name, usernameNorm), password), exists);
+      await cloud(() => CloudSync.addClass(name, name, uid));
+      return createAccount(name, 'class', '', password, b, name, null, uid);
     },
-    // Öğrenci hesabı aç: sınıf bu cihazda kayıtlıysa sınıf şifresi sorulur
+    // Öğrenci hesabı aç: sınıf sunucuda kayıtlı olmalı, sınıf şifresi doğrulanır
     async register_student(b) {
       const cls = className(b.class_name);
       if (cls.length < 2) fail('Sınıfının adını yaz (ör. 6-A)');
-      const clsAcc = accounts.find(a => a.role === 'class' && a.login === cls);
-      if (clsAcc && clsAcc.hash !== await hashPass(String(b.class_password || ''), clsAcc.salt)) fail('Sınıf şifresi yanlış. Sınıf şifresini öğretmeninden öğrenebilirsin.');
       const display = String(b.display_name || '').replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
       if (display.length < 2 || display.length > 20 || !/^[\p{L} .\-]+$/u.test(display)) fail('Adın 2–20 harf olmalı (ör. Ali Y.)');
       const login = usernameNorm(b.username);
       if (!/^[a-z][a-z0-9._]{2,19}$/.test(login)) fail('Kullanıcı adı 3–20 karakter olmalı, harfle başlamalı; yalnızca harf, rakam, nokta ve alt çizgi (ör. ali.y)');
       const password = String(b.password || '');
       if (password.length < 4) fail('Şifren en az 4 karakter olmalı');
-      if (accounts.some(a => a.login === login)) fail('Bu kullanıcı adı bu cihazda alınmış. Başka bir tane dene (ör. ' + login + '2)');
-      return createAccount(login, 'student', cls, password, b, login, display);
+      const clsDoc = await cloud(() => CloudSync.getClass(cls));
+      if (!clsDoc) fail('Bu sınıf kayıtlı değil. Önce sınıf hesabı açılmalı ("Yeni sınıf kaydet").');
+      const ok = await cloud(() => CloudSync.checkClassPassword(CloudSync.emailFor('class', cls, usernameNorm), String(b.class_password || '')));
+      if (!ok) fail('Sınıf adı veya sınıf şifresi yanlış. Sınıf şifresini öğretmeninden öğrenebilirsin.');
+      const uid = await cloud(() => CloudSync.signUp(CloudSync.emailFor('student', login, usernameNorm), password), 'Bu kullanıcı adı alınmış. Başka bir tane dene (ör. ' + login + '2)');
+      return createAccount(login, 'student', clsDoc.name || cls, password, b, login, display, uid);
     },
     async login(b) {
-      const u = usernameNorm(b.name), c = className(b.name);
+      const u = usernameNorm(b.name), c = className(b.name), password = String(b.password || '');
+      // 1) Sunucu: önce öğrenci kullanıcı adı, sonra sınıf adı
+      let offline = false;
+      for (const [role, login] of [['student', u], ['class', c]]) {
+        let uid = null;
+        try { uid = await CloudSync.signIn(CloudSync.emailFor(role, login, usernameNorm), password); }
+        catch (e) { if (e.message !== 'Ad veya şifre yanlış') { offline = true; break; } continue; }
+        const d = await cloud(() => CloudSync.pull(uid));
+        const salt = newSalt();
+        accounts = accounts.filter(a => a.id !== uid && a.login !== login);
+        accounts.push({ id: uid, login, role, cls: d?.cls || '', salt, hash: await hashPass(password, salt), cloud: true });
+        saveAccounts();
+        if (d?.save) localStorage.setItem(SAVE_KEY(uid), d.save);
+        synced[uid] = true; S = null; curId = uid; load();
+        pushed[uid] = JSON.stringify({ ...S, match: null, queue: null, updatedAt: 0 });
+        return { token: uid };
+      }
+      // 2) Bu cihazdaki hesap (internet yoksa ya da sunucudan önce açılmışsa)
       const a = accounts.find(x => x.role === 'student' && x.login === u) || accounts.find(x => x.role !== 'student' && x.login === c);
-      // Şifresiz eski kayıtlar boş şifreyle açılır
-      const ok = a && (a.hash === '' ? String(b.password || '') === '' : a.hash === await hashPass(String(b.password || ''), a.salt));
-      if (!ok) { await new Promise(r => setTimeout(r, 600)); fail('Ad veya şifre yanlış'); }
+      const ok = a && (a.hash === '' ? password === '' : a.hash === await hashPass(password, a.salt));
+      if (!ok) { await new Promise(r => setTimeout(r, 600)); fail(offline ? 'Sunucuya bağlanılamadı. İnternetini kontrol et.' : 'Ad veya şifre yanlış'); }
+      // Sunucudan önce açılmış hesap: internet varsa sunucuya taşı
+      if (!a.cloud && !offline && password.length >= 4) {
+        try {
+          const uid = await CloudSync.signUp(CloudSync.emailFor(a.role, a.login, usernameNorm), password);
+          if (a.role === 'class') await CloudSync.addClass(a.login, a.login, uid).catch(() => {});
+          const old = localStorage.getItem(SAVE_KEY(a.id));
+          localStorage.setItem(SAVE_KEY(uid), old);
+          localStorage.removeItem(SAVE_KEY(a.id));
+          a.id = uid; a.cloud = true; saveAccounts();
+          curId = uid; S = null; load(); pushed[uid] = ''; synced[uid] = true; save(); await CloudSync.flush();
+        } catch { /* ad sunucuda başkasına aitse hesap bu cihazda kalır */ }
+      }
       return { token: a.id };
     },
-    me: () => (P(), profile()),
+    async me() { P(); await syncDown(); return profile(); },
     look(b) {
       const p = P();
       if (COLORS.includes(b.color)) p.color = b.color;
@@ -460,7 +526,12 @@ window.LocalServer = (() => {
       return { slice: idx, prize: [s[0], s[1]], ...profile() };
     },
     // Bu cihazdaki hesapların sıralaması
-    leaderboard: () => {
+    async leaderboard() {
+      try {
+        const list = await CloudSync.leaderboard();
+        const rows = list.map((p, i) => ({ ...p, id: 'u' + i, class_name: p.className || '' }));
+        return { players: rows.filter(p => p.role === 'class').slice(0, 10), students: rows.filter(p => p.role !== 'class').slice(0, 10) };
+      } catch {}
       const all = loadAccounts().map(a => { try { return JSON.parse(localStorage.getItem(SAVE_KEY(a.id)))?.player; } catch { return null; } }).filter(p => p && p.games);
       const rank = list => list.sort((x, y) => (y.wins - x.wins) || (x.games - y.games)).slice(0, 10);
       return { players: rank(all.filter(p => p.role === 'class')).map(publicPlayer),
@@ -629,6 +700,12 @@ window.LocalServer = (() => {
     },
     profile: () => (load(), S.player ? { ...publicPlayer(S.player) } : null),
   };
+
+  async function cloud(fn, alreadyMsg) {
+    if (!window.CloudSync) fail('Sunucuya bağlanılamadı');
+    try { return await fn(); }
+    catch (e) { fail(e.message === 'already' ? (alreadyMsg || 'Bu ad zaten kayıtlı') : e.message); }
+  }
 
   async function handle(action, body = {}) {
     await ready;
