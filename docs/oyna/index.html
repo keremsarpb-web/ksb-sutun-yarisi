@@ -84,21 +84,20 @@
     </form>
 
     <form x-show="authTab==='register' || authTab==='student'" @submit.prevent="authTab==='student' ? registerStudent() : register()">
-    <h2>Oyuncu oluştur</h2>
-    <p class="hint">Hiçbir şey indirmeden oyna. İlerlemen bu cihazda, bu tarayıcıda kaydedilir.</p>
+    <h2 x-text="authTab==='student' ? 'Kendi hesabını aç' : 'Sınıfını kaydet'"></h2>
     <div class="stage-mini">
       <div x-effect="screen==='create' && (authTab==='register' || authTab==='student') && stage($el, form)"></div>
     </div>
     <template x-if="authTab==='student'">
       <div>
-        <p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur.</p>
+        <p class="hint">Sınıfının adını yaz. Sınıfın bu cihazda kayıtlıysa sınıf şifresi de sorulur. Hesabın bu cihazda, bu tarayıcıda saklanır.</p>
         <div class="pair">
           <div>
             <label for="st-class">Sınıfın</label>
             <input id="st-class" maxlength="16" x-model="form.class_name" placeholder="ör. 6-A">
           </div>
           <div>
-            <label for="st-cpass">Sınıf şifresi</label>
+            <label for="st-cpass">Sınıf şifresi <small>(varsa)</small></label>
             <input id="st-cpass" type="password" x-model="form.class_password" autocomplete="off">
           </div>
         </div>
@@ -117,10 +116,22 @@
     </template>
     <template x-if="authTab==='register'">
       <div>
-        <label for="name">Adın</label>
-        <input id="name" maxlength="20" x-model="form.name" placeholder="ör. Ali" autocomplete="nickname">
+        <label for="name">Sınıf adı</label>
+        <input id="name" maxlength="16" x-model="form.name" placeholder="ör. 6-A" autocomplete="username">
       </div>
     </template>
+    <div class="pair">
+      <div>
+        <label for="reg-pass" x-text="authTab==='student' ? 'Şifren' : 'Sınıf şifresi'"></label>
+        <input id="reg-pass" type="password" x-model="form.password" autocomplete="new-password" placeholder="en az 4 karakter">
+      </div>
+      <div>
+        <label for="reg-pass2">Şifre tekrar</label>
+        <input id="reg-pass2" type="password" x-model="form.password2" autocomplete="new-password">
+      </div>
+    </div>
+    <p class="hint" x-show="authTab==='register'">Şifreyi sınıf öğretmeninle birlikte belirleyin ve sınıfa söyleyin. Aynı şifreyle her cihazdan girilir.</p>
+    <p class="hint" x-show="authTab==='student'">Şifreni kimseye söyleme. Unutursan öğretmenin sıfırlayabilir.</p>
     <label>Renk</label>
     <div class="swatches">
       <template x-for="c in COLORS" :key="c">
@@ -145,8 +156,8 @@
         <button type="button" class="pill" :class="form.mouth===k && 'on'" @click="form.mouth=k" x-text="label"></button>
       </template>
     </div>
-    <button class="btn primary" type="submit" x-text="'Oyna!'"></button>
-    <p class="hint">Hediye olarak 1 Mystery Box ile başlarsın.</p>
+    <button class="btn primary" type="submit" x-text="authTab==='student' ? 'Hesabımı aç' : 'Sınıfı kaydet'"></button>
+    <p class="hint">Yeni açılan her hesaba hediye olarak 1 Mystery Box verilir.</p>
     </form>
   </section>
 

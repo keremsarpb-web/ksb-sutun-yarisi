@@ -1,9 +1,9 @@
 // Sütun Yarışı web sürümü: okul sunucusunun (api.php) yaptığını tarayıcıda yapar.
 // Kayıtlar bu cihazda (localStorage) tutulur; maçlar bilgisayar oyuncularına karşı oynanır.
 window.LocalServer = (() => {
-  const KEY = 'sy_web_save_v1';
+  const ACC_KEY = 'sy_web_accounts_v1';      // hesap listesi (ad, rol, şifre özeti)
+  const SAVE_KEY = id => 'sy_web_save:' + id; // her hesabın kaydı ayrı
   const ME = 1; // bu cihazdaki oyuncu; odadaki arkadaşlar 2–5
-  const TOKEN = 'web-oyuncu';
 
   // ---- Oyun kuralları (api.php ile aynı) ----
   const QUEUE_WAIT_MS = 5000, COUNTDOWN_MS = 4000, QUESTION_MS = 15000, REVEAL_MS = 3500;
@@ -59,16 +59,74 @@ window.LocalServer = (() => {
   const fail = (msg, status) => { throw new ApiError(msg, status); };
 
   // ---- kayıt ----
-  let S = null;
+  // ---- hesaplar: okul sürümündeki gibi; bu cihazda saklanır ----
+  let accounts = null, curId = '', S = null;
+  const saveAccounts = () => { try { localStorage.setItem(ACC_KEY, JSON.stringify(accounts)); } catch {} };
+  function loadAccounts() {
+    if (accounts) return accounts;
+    try { accounts = JSON.parse(localStorage.getItem(ACC_KEY)) || []; } catch { accounts = []; }
+    // İlk sürümün şifresiz tek kaydı bir öğrenci hesabına dönüşür, oturum açık kalır
+    try {
+      const old = JSON.parse(localStorage.getItem('sy_web_save_v1'));
+      if (old?.player && !accounts.length) {
+        const id = 'h' + now().toString(36);
+        let login = usernameNorm(old.player.name);
+        if (!/^[a-z][a-z0-9._]{2,19}$/.test(login)) login = 'oyuncu' + Math.floor(Math.random() * 900 + 100);
+        accounts.push({ id, login, role: 'student', cls: '', salt: '', hash: '' });
+        old.player.role = 'student'; old.player.username = login;
+        localStorage.setItem(SAVE_KEY(id), JSON.stringify(old));
+        localStorage.setItem('sy_token', id);
+        saveAccounts();
+      }
+      localStorage.removeItem('sy_web_save_v1');
+    } catch {}
+    return accounts;
+  }
+  const account = () => loadAccounts().find(a => a.id === curId) || null;
+  function use(token) {
+    loadAccounts();
+    if (token !== curId) { curId = token || ''; S = null; }
+  }
   function load() {
     if (S) return S;
-    try { S = JSON.parse(localStorage.getItem(KEY)) || null; } catch { S = null; }
+    try { S = curId ? JSON.parse(localStorage.getItem(SAVE_KEY(curId))) : null; } catch { S = null; }
     if (!S) S = { player: null, inv: [], nextId: 1, exams: [], recentQ: [], match: null, queue: null };
     if (S.match?.players.some(p => p.remote)) S.match = null;
     return S;
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
-  const P = () => { const p = load().player; if (!p) fail('Oturum bulunamadı', 401); return p; };
+  function save() { if (account()) try { localStorage.setItem(SAVE_KEY(curId), JSON.stringify(S)); } catch {} }
+  const P = () => { const p = account() && load().player; if (!p) fail('Oturum bulunamadı', 401); return p; };
+
+  // "6 a", "6-a " -> "6-A" (api.php class_name ile aynı)
+  function className(raw) {
+    let n = String(raw || '').trim().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ');
+    n = n.replace(/^(\d{1,2})\s*[-\/ ]?\s*(\p{L})$/u, '$1-$2');
+    return n.toLocaleUpperCase('tr').slice(0, 16);
+  }
+  // Ali.Yılmaz -> ali.yilmaz (api.php username_norm ile aynı)
+  function usernameNorm(raw) {
+    const map = { ç: 'c', Ç: 'c', ğ: 'g', Ğ: 'g', ı: 'i', I: 'i', İ: 'i', ö: 'o', Ö: 'o', ş: 's', Ş: 's', ü: 'u', Ü: 'u', ' ': '.' };
+    return String(raw || '').trim().replace(/[çÇğĞıIİöÖşŞüÜ ]/g, c => map[c]).toLowerCase();
+  }
+  async function hashPass(pass, salt) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + '|' + pass));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  const newSalt = () => [...crypto.getRandomValues(new Uint8Array(12))].map(b => b.toString(16).padStart(2, '0')).join('');
+  async function createAccount(login, role, cls, password, look, name, display) {
+    const id = 'h' + now().toString(36) + Math.floor(Math.random() * 1000);
+    const salt = newSalt();
+    accounts.push({ id, login, role, cls, salt, hash: await hashPass(password, salt) });
+    saveAccounts();
+    curId = id; S = null; load();
+    S.player = { id: 1, name: display || name, username: role === 'student' ? login : '', className: cls, role,
+      color: COLORS.includes(look.color) ? look.color : COLORS[5],
+      shape: SHAPE_KEYS.includes(look.shape) ? look.shape : 'round', eyes: EYE_KEYS.includes(look.eyes) ? look.eyes : 'normal',
+      mouth: MOUTH_KEYS.includes(look.mouth) ? look.mouth : 'smile', hat: '', aura: '', wins: 0, games: 0, coins: 0, lastSpin: null, championGift: false };
+    addItem('box', ''); // hoş geldin kutusu
+    save();
+    return { token: id };
+  }
   const owns = (type, key) => S.inv.some(i => i.type === type && i.key === key);
   const addItem = (type, key = '') => { S.inv.push({ id: S.nextId++, type, key }); };
   const addCoins = n => { if (n > 0) S.player.coins += n; };
@@ -81,7 +139,7 @@ window.LocalServer = (() => {
   function profile() {
     const p = S.player;
     let champion = false;
-    if (CHAMPIONS.includes(norm(p.name)) && !p.championGift) {
+    if ((CHAMPIONS.includes(norm(p.name)) || CHAMPIONS.includes(norm(p.username))) && !p.championGift) {
       p.championGift = true; addItem('box', 'void'); champion = true;
     }
     const owned = { hat: [], aura: [], emote: [...FREE_EMOTES], shape: [...SHAPE_KEYS] };
@@ -91,7 +149,9 @@ window.LocalServer = (() => {
       else if (owned[i.type] && !owned[i.type].includes(i.key)) owned[i.type].push(i.key);
     }
     save();
-    return { player: publicPlayer(p), boxes, owned, coins: p.coins, coin_bonus: coinBonus(p.aura), free_spin: p.lastSpin !== today(), champion };
+    const player = publicPlayer(p);
+    if (p.role === 'student') { player.username = p.username || account()?.login || ''; player.class_name = p.className || ''; }
+    return { player, boxes, owned, coins: p.coins, coin_bonus: coinBonus(p.aura), free_spin: p.lastSpin !== today(), champion };
   }
 
   // ---- kutular ----
@@ -327,17 +387,37 @@ window.LocalServer = (() => {
 
   // ---- istekler ----
   const actions = {
-    register(b) {
-      const name = String(b.name || '').trim().replace(/\s+/g, ' ').slice(0, 20);
-      if (name.length < 2) fail('Adın en az 2 harf olmalı');
-      load();
-      S.player = { id: 1, name, role: 'student', color: COLORS.includes(b.color) ? b.color : COLORS[5],
-        shape: SHAPE_KEYS.includes(b.shape) ? b.shape : 'round', eyes: EYE_KEYS.includes(b.eyes) ? b.eyes : 'normal',
-        mouth: MOUTH_KEYS.includes(b.mouth) ? b.mouth : 'smile', hat: '', aura: '', wins: 0, games: 0, coins: 0, lastSpin: null, championGift: false };
-      S.inv = []; S.exams = []; S.match = null; S.queue = null;
-      addItem('box', ''); // hoş geldin kutusu
-      save();
-      return { token: TOKEN };
+    // Yeni sınıf kaydet
+    async register(b) {
+      const name = className(b.name);
+      if (name.length < 2) fail('Sınıf adı en az 2 karakter olmalı (ör. 6-A)');
+      const password = String(b.password || '');
+      if (password.length < 4) fail('Sınıf şifresi en az 4 karakter olmalı');
+      if (accounts.some(a => a.login === name || a.login === usernameNorm(name))) fail('Bu sınıf bu cihazda zaten kayıtlı. "Giriş yap" sekmesinden sınıf şifresiyle gir.');
+      return createAccount(name, 'class', '', password, b, name);
+    },
+    // Öğrenci hesabı aç: sınıf bu cihazda kayıtlıysa sınıf şifresi sorulur
+    async register_student(b) {
+      const cls = className(b.class_name);
+      if (cls.length < 2) fail('Sınıfının adını yaz (ör. 6-A)');
+      const clsAcc = accounts.find(a => a.role === 'class' && a.login === cls);
+      if (clsAcc && clsAcc.hash !== await hashPass(String(b.class_password || ''), clsAcc.salt)) fail('Sınıf şifresi yanlış. Sınıf şifresini öğretmeninden öğrenebilirsin.');
+      const display = String(b.display_name || '').replace(/<[^>]*>/g, '').trim().replace(/\s+/g, ' ');
+      if (display.length < 2 || display.length > 20 || !/^[\p{L} .\-]+$/u.test(display)) fail('Adın 2–20 harf olmalı (ör. Ali Y.)');
+      const login = usernameNorm(b.username);
+      if (!/^[a-z][a-z0-9._]{2,19}$/.test(login)) fail('Kullanıcı adı 3–20 karakter olmalı, harfle başlamalı; yalnızca harf, rakam, nokta ve alt çizgi (ör. ali.y)');
+      const password = String(b.password || '');
+      if (password.length < 4) fail('Şifren en az 4 karakter olmalı');
+      if (accounts.some(a => a.login === login)) fail('Bu kullanıcı adı bu cihazda alınmış. Başka bir tane dene (ör. ' + login + '2)');
+      return createAccount(login, 'student', cls, password, b, login, display);
+    },
+    async login(b) {
+      const u = usernameNorm(b.name), c = className(b.name);
+      const a = accounts.find(x => x.role === 'student' && x.login === u) || accounts.find(x => x.role !== 'student' && x.login === c);
+      // Şifresiz eski kayıtlar boş şifreyle açılır
+      const ok = a && (a.hash === '' ? String(b.password || '') === '' : a.hash === await hashPass(String(b.password || ''), a.salt));
+      if (!ok) { await new Promise(r => setTimeout(r, 600)); fail('Ad veya şifre yanlış'); }
+      return { token: a.id };
     },
     me: () => (P(), profile()),
     look(b) {
@@ -379,9 +459,12 @@ window.LocalServer = (() => {
       if (s[0] === 'coins') addCoins(s[1]); else addItem('box', s[1] === 'classic' ? '' : s[1]);
       return { slice: idx, prize: [s[0], s[1]], ...profile() };
     },
+    // Bu cihazdaki hesapların sıralaması
     leaderboard: () => {
-      const p = S?.player;
-      return { players: [], students: p && p.games ? [{ ...publicPlayer(p), class_name: 'Bu cihaz' }] : [] };
+      const all = loadAccounts().map(a => { try { return JSON.parse(localStorage.getItem(SAVE_KEY(a.id)))?.player; } catch { return null; } }).filter(p => p && p.games);
+      const rank = list => list.sort((x, y) => (y.wins - x.wins) || (x.games - y.games)).slice(0, 10);
+      return { players: rank(all.filter(p => p.role === 'class')).map(publicPlayer),
+        students: rank(all.filter(p => p.role !== 'class')).map(p => ({ ...publicPlayer(p), class_name: p.className || '' })) };
     },
     queue_join() {
       P();
@@ -549,11 +632,12 @@ window.LocalServer = (() => {
 
   async function handle(action, body = {}) {
     await ready;
+    use(body.token);
     load();
     const fn = actions[action];
     if (!fn) fail('Bu özellik okul sürümünde var. Okulunda kurmak için oyunun sitesine bak.');
-    return JSON.parse(JSON.stringify(fn(body || {})));
+    return JSON.parse(JSON.stringify(await fn(body || {})));
   }
 
-  return { handle, hasPlayer: () => !!load().player, TOKEN, ApiError, room, ready };
+  return { handle, hasAccount: id => loadAccounts().some(a => a.id === id), accountCount: () => loadAccounts().length, ApiError, room, ready };
 })();

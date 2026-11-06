@@ -26,8 +26,9 @@
     const net = { peer: null, conns: new Map(), host: null, loop: 0, guestState: null, rewarded: {} };
 
     Object.assign(g, {
-      token: LocalServer.hasPlayer() ? LocalServer.TOKEN : '',
-      authTab: 'register',
+      // Oturum: okul sürümü gibi sy_token; hesap bu cihazda yoksa giriş ekranı
+      token: (() => { const n = LocalServer.accountCount(); let t = ''; try { t = localStorage.getItem('sy_token') || ''; } catch {} return n && LocalServer.hasAccount(t) ? t : ''; })(),
+      authTab: LocalServer.accountCount() ? 'login' : 'student',
       // Ana ekrandan açıldıysa yükleme düğmesi gizlenir
       standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
       installTip: '',
@@ -60,7 +61,7 @@
             return { ok: true };
           }
         }
-        return localApi(action, body);
+        return localApi(action, { ...body, token: this.token });
       },
 
       async playAgain() {

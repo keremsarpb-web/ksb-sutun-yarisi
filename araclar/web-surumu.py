@@ -31,17 +31,10 @@ rep('<title>Sütun Yarışı</title>', '<title>Sütun Yarışı – Tarayıcıda
 rep(f'<script src="char3d.js?v={version}"></script>',
     f'<script src="char3d.js?v={version}"></script>\n<script src="matematik.js?v={version}"></script>\n<script src="server.js?v={version}"></script>\n<script src="web.js?v={version}"></script>\n<link rel="stylesheet" href="web.css?v={version}">')
 
-# Giriş: tek sekme, şifresiz oyuncu oluşturma
-rep("""<h2 x-text="authTab==='student' ? 'Kendi hesabını aç' : 'Sınıfını kaydet'"></h2>""",
-    """<h2>Oyuncu oluştur</h2>
-    <p class="hint">Hiçbir şey indirmeden oyna. İlerlemen bu cihazda, bu tarayıcıda kaydedilir.</p>""")
-rep('<label for="name">Sınıf adı</label>', '<label for="name">Adın</label>')
-rep('<input id="name" maxlength="16" x-model="form.name" placeholder="ör. 6-A" autocomplete="username">',
-    '<input id="name" maxlength="20" x-model="form.name" placeholder="ör. Ali" autocomplete="nickname">')
-s, n = re.subn(r'\n    <div class="pair">\n      <div>\n        <label for="reg-pass".*?\n    </div>\n    <p class="hint" x-show="authTab===.register.">.*?</p>\n    <p class="hint" x-show="authTab===.student.">.*?</p>\n', '\n', s, flags=re.S)
-assert n == 1, 'şifre alanları'
-rep("""x-text="authTab==='student' ? 'Hesabımı aç' : 'Sınıfı kaydet'\"""", 'x-text="\'Oyna!\'"')
-rep('Yeni açılan her hesaba hediye olarak 1 Mystery Box verilir.', 'Hediye olarak 1 Mystery Box ile başlarsın.')
+# Giriş: okul sürümündeki sekmeler aynen; hesaplar bu cihazda saklanır
+rep('<p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur.</p>',
+    '<p class="hint">Sınıfının adını yaz. Sınıfın bu cihazda kayıtlıysa sınıf şifresi de sorulur. Hesabın bu cihazda, bu tarayıcıda saklanır.</p>')
+rep('<label for="st-cpass">Sınıf şifresi</label>', '<label for="st-cpass">Sınıf şifresi <small>(varsa)</small></label>')
 
 # Lobi metinleri
 rep('<p>2–5 oyuncu, 10 soru. ', '<p>Bilgisayar oyuncularına karşı 2–5 kişilik maç, 10 soru. ')
