@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sütun Yarışı</string>
+    <string name="title_activity_main">Sütun Yarışı</string>
+    <string name="package_name">com.ksbgames.sutunyarisi</string>
+    <string name="custom_url_scheme">com.ksbgames.sutunyarisi</string>
+</resources>

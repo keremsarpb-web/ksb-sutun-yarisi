@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  /* Uygulama simgesi (1024x1024, saydamlık yok). Edge ile ekran görüntüsü alınarak icon.png üretilir. */
+  html, body { margin: 0; width: 1024px; height: 1024px; overflow: hidden; }
+  .bg { position: absolute; inset: 0; background: linear-gradient(#4f8fe8 0%, #8fd0ff 58%, #cfe8ff 76%); }
+  .sun { position: absolute; top: 96px; right: 120px; width: 150px; height: 150px; border-radius: 50%; background: #ffe066; box-shadow: 0 0 0 26px rgba(255, 224, 102, .35); }
+  .grass { position: absolute; left: 0; right: 0; bottom: 0; height: 170px; background: linear-gradient(#7cc36a, #5aa548); }
+  .pillar { position: absolute; bottom: 150px; width: 170px; background: linear-gradient(90deg, #faf6ec 0 18%, #ece5d4 18% 42%, #dcd3bd 42% 66%, #c9bea5 66% 86%, #b5a98e 86%); border-radius: 10px 10px 0 0; }
+  .pillar::before { content: ""; position: absolute; left: -22px; right: -22px; top: -30px; height: 34px; border-radius: 8px; background: linear-gradient(90deg, #fffaf0 0 20%, #efe8d8 20% 50%, #ddd4bf 50% 80%, #c9bea5 80%); }
+  .p1 { left: 120px; height: 250px; } .p2 { left: 427px; height: 470px; } .p3 { left: 734px; height: 340px; }
+  .char { position: absolute; left: 512px; bottom: 645px; width: 300px; height: 280px; transform: translateX(-50%); }
+  .body { position: absolute; inset: 30px 10px 0; border-radius: 50% 50% 46% 46%; background: radial-gradient(circle at 35% 30%, #8fd0ff, #3a8ee8 60%, #2563c9); box-shadow: inset -20px -24px 0 rgba(0, 0, 0, .12); }
+  .eye { position: absolute; top: 112px; width: 54px; height: 64px; border-radius: 50%; background: #fff; }
+  .eye::after { content: ""; position: absolute; left: 16px; top: 18px; width: 30px; height: 36px; border-radius: 50%; background: #1b1b2f; }
+  .e1 { left: 78px; } .e2 { right: 78px; }
+  .cheek { position: absolute; top: 186px; width: 42px; height: 24px; border-radius: 50%; background: #ff8fab; } .c1 { left: 52px; } .c2 { right: 52px; }
+  .mouth { position: absolute; left: 50%; top: 182px; width: 70px; height: 38px; transform: translateX(-50%); border-bottom: 12px solid #1b1b2f; border-radius: 0 0 50% 50%; }
+  .crown { position: absolute; left: 50%; top: -42px; width: 150px; height: 84px; transform: translateX(-50%); background: #fcc419;
+    clip-path: polygon(0 100%, 0 30%, 20% 60%, 35% 0, 50% 55%, 65% 0, 80% 60%, 100% 30%, 100% 100%); box-shadow: inset 0 -16px 0 #f59f00; }
+</style></head>
+<body>
+  <div class="bg"></div><div class="sun"></div><div class="grass"></div>
+  <div class="pillar p1"></div><div class="pillar p2"></div><div class="pillar p3"></div>
+  <div class="char">
+    <div class="body"></div>
+    <div class="eye e1"></div><div class="eye e2"></div>
+    <div class="cheek c1"></div><div class="cheek c2"></div>
+    <div class="mouth"></div>
+    <div class="crown"></div>
+  </div>
+</body></html>

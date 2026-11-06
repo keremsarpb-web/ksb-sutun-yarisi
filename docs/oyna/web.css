@@ -18,3 +18,7 @@
 .web-tip { justify-self: center; max-width: 520px; margin: 0; background: #fff4d6; border: 2px solid #ffd977; border-radius: 14px; padding: 8px 12px; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; }
 /* Ana ekrandan açılınca çentik ve alt çubuk için boşluk */
 @media (display-mode: standalone) { .app { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(40px, env(safe-area-inset-bottom)); } }
+
+/* Telefon uygulaması içinde web'e özel şeritler gizli */
+.in-app .web-bar, .in-app .web-tip { display: none !important; }
+.in-app .app { padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }

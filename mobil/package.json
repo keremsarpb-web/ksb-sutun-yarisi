@@ -1,0 +1,20 @@
+{
+  "name": "sutun-yarisi-mobil",
+  "version": "1.9.4",
+  "private": true,
+  "description": "Sütun Yarışı telefon uygulaması (iOS ve Android, Capacitor). Oyun dosyaları docs/oyna'dan www'ye kopyalanır.",
+  "scripts": {
+    "www": "node web-kopyala.js",
+    "sync": "node web-kopyala.js && npx cap sync",
+    "simgeler": "npx @capacitor/assets generate --iconBackgroundColor '#3a5bd9' --splashBackgroundColor '#cfe8ff'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/ios": "^7.6.10"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.6.10"
+  }
+}

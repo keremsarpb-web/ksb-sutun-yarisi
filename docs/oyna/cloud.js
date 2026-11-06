@@ -187,5 +187,25 @@ window.CloudSync = (() => {
     }, () => {});
   }
 
-  return { worldAllocPlot, worldPublish, worldWatch, adminList, adminGive, watchGifts, ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
+  // ---- Hesap silme (App Store kuralı: uygulama içinden silinebilmeli) ----
+  // Şifreyle yeniden doğrulanır; kayıt, köy, sıralama satırı, sınıf kaydı ve hesap kalıcı silinir.
+  async function deleteAccount(email, password) {
+    const { auth, db } = await ready();
+    let u;
+    try { u = (await auth.signInWithEmailAndPassword(email, pw(password))).user; }
+    catch (e) { const m = why(e); throw new Error(m === 'Ad veya şifre yanlış' ? 'Şifre yanlış' : m); }
+    unwatch?.(); unwatch = null; pending = null; clearTimeout(pushTimer);
+    for (const c of ['world', 'public', 'users']) await db.collection(c).doc(u.uid).delete().catch(() => {});
+    const cls = await db.collection('classes').where('uid', '==', u.uid).get().catch(() => null);
+    for (const d of cls?.docs || []) await d.ref.delete().catch(() => {});
+    try { await u.delete(); } catch (e) { throw new Error(why(e)); }
+  }
+  // ---- Şikayet (App Store kuralı: kullanıcı içeriği bildirilebilmeli) ----
+  async function report(target, name, reason) {
+    const { auth, db } = await ready();
+    if (!auth.currentUser) throw new Error('Şikayet için giriş yapmalısın');
+    await db.collection('reports').add({ by: auth.currentUser.uid, target: String(target), name: String(name).slice(0, 30), reason: String(reason).slice(0, 200), at: Date.now() });
+  }
+
+  return { deleteAccount, report, worldAllocPlot, worldPublish, worldWatch, adminList, adminGive, watchGifts, ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
 })();

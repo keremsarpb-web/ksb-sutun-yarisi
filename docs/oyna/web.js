@@ -1,6 +1,9 @@
 // Web sürümü: oyunun arayüzünü sunucu yerine tarayıcıdaki LocalServer'a bağlar.
 // Odalar (online): oda kuran tarayıcı maçı yönetir, konuklar PeerJS ile bağlanır.
 (() => {
+  // Telefon uygulaması (Capacitor) içinde: web bağlantıları ve "web'den yükle" düğmesi gizlenir
+  const native = !!window.Capacitor?.isNativePlatform?.();
+  if (native) document.documentElement.classList.add('in-app');
   const base = window.game;
   const PREFIX = 'ksb-sutun-yarisi-oda-';
   const ALPH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -41,8 +44,9 @@
       // Oturum: okul sürümü gibi sy_token; hesap bu cihazda yoksa giriş ekranı
       token: (() => { const n = LocalServer.accountCount(); let t = ''; try { t = localStorage.getItem('sy_token') || ''; } catch {} return n && LocalServer.hasAccount(t) ? t : ''; })(),
       authTab: LocalServer.accountCount() ? 'login' : 'student',
+      webApp: true,
       // Ana ekrandan açıldıysa yükleme düğmesi gizlenir
-      standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+      standalone: native || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
       installTip: '',
 
       // Android'de tarayıcının kurulum penceresi; iPhone ve diğerlerinde adım adım yol tarifi

@@ -33,6 +33,8 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
   const base = window.game;
   const PLOT = WORLD.PLOT;
   const online = () => !!window.CloudSync;
+  const loadBlocked = () => { try { return JSON.parse(localStorage.getItem('sy_blocked') || '[]'); } catch { return []; } };
+  const saveBlocked = list => { try { localStorage.setItem('sy_blocked', JSON.stringify(list)); } catch {} };
   const CATS = ['ev', 'işletme', 'doğa', 'yol', 'süs'];
 
   window.game = function () {
@@ -40,7 +42,7 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
     let unwatch = null, beat = 0;
     Object.assign(g, {
       WORLD_ITEMS, WORLD_CATS: CATS,
-      world: { open: false, loading: false, villages: [], mine: null, mode: 'walk', pick: 'house', cat: 'ev', zoom: 1, msg: '', income: 0, sel: null },
+      world: { open: false, loading: false, villages: [], mine: null, mode: 'walk', pick: 'house', cat: 'ev', zoom: 1, msg: '', income: 0, sel: null, visiting: null, blocked: loadBlocked() },
 
       async openWorld() {
         this.err = '';
@@ -93,7 +95,23 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
         } catch (e) { if (!heartbeat) this.world.msg = 'Köy kaydedilemedi: ' + e.message; }
       },
 
-      villageAt(n) { return this.world.villages.find(v => v.plot === n); },
+      villageAt(n) { return this.visibleVillages().find(v => v.plot === n); },
+      // Engellenen oyuncuların köyleri ve karakterleri gösterilmez
+      visibleVillages() { return this.world.villages.filter(v => !this.world.blocked.includes(v.uid)); },
+      canReport: () => online(),
+      blockVillage() {
+        const w = this.world, v = w.visiting;
+        if (!v || !confirm(`${v.name} engellensin mi? Köyünü ve karakterini bir daha görmezsin.`)) return;
+        w.blocked = [...w.blocked, v.uid]; saveBlocked(w.blocked);
+        w.visiting = null; w.msg = `${v.name} engellendi.`;
+      },
+      unblockAll() { this.world.blocked = []; saveBlocked([]); this.world.msg = 'Engellemeler kaldırıldı.'; },
+      async reportVillage(reason) {
+        const v = this.world.visiting;
+        if (!v || !reason) return;
+        try { this.world.msg = (await this.api('report_player', { target: v.uid, name: v.name, reason })).message; }
+        catch (e) { this.world.msg = e.message; }
+      },
       isOnline(v) { return v && Date.now() - (v.lastSeen || 0) < 150000; },
 
       // 3D sahneye güncel durumu verir (x-effect ile her değişiklikte çağrılır)
@@ -102,13 +120,17 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
         if (!window.World3D || !w.open) return;
         World3D.sync({
           mine: w.mine ? { plot: w.mine.plot, tiles: { ...w.mine.tiles }, pos: { ...(w.mine.pos || {}) } } : null,
-          villages: w.villages.map(v => ({ ...v, online: this.isOnline(v) })),
+          villages: this.visibleVillages().map(v => ({ ...v, online: this.isOnline(v) })),
           me: this.me ? { ...this.me } : null,
           mode: w.mode,
         });
       },
       centerOn(plot, pos) { if (window.World3D && plot !== undefined) World3D.focus(plot, pos); },
-      visitVillage(plot) { if (plot !== '') this.centerOn(Number(plot)); },
+      visitVillage(plot) {
+        if (plot === '') return;
+        this.world.visiting = this.villageAt(Number(plot)) || null;
+        this.centerOn(Number(plot), this.world.visiting?.pos);
+      },
       zoomBy(f) { World3D?.zoom(1 / f); },
       rotateWorld(d) { World3D?.rotate(d); },
 

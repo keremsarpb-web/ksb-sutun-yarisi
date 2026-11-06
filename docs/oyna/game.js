@@ -189,6 +189,8 @@ function game() {
     form: { name: '', class_name: '', class_password: '', display_name: '', username: '', password: '', password2: '', color: COLORS[5], shape: 'round', eyes: 'normal', mouth: 'smile', hat: '', aura: '' },
     compact: false,
     notice: '',
+    webApp: false, // online sürüm ve uygulama web.js'te true yapar
+    delPass: '',
     admin: { list: [], q: '', amount: 500, busy: false, loaded: false, msg: '' },
     me: null, boxes: [], owned: { hat: [], aura: [], emote: [], shape: [] }, board: [], boardStudents: [], boardTab: 'class',
     coins: 0, coinBonus: 0, freeSpin: false,
@@ -447,6 +449,18 @@ function game() {
         this.loot = r.loot;
       } catch (e) { this.err = e.message; }
       this.opening = null;
+    },
+
+    // Hesabı kalıcı sil (App Store kuralı)
+    async deleteAccount() {
+      if (!confirm('Hesabın ve bütün ilerlemen kalıcı olarak silinecek. Emin misin?')) return;
+      try {
+        await this.api('delete_account', { password: this.delPass });
+        this.delPass = '';
+        this.setToken('');
+        this.me = null; this.screen = 'create'; this.authTab = 'login';
+        this.notice = 'Hesabın silindi.';
+      } catch (e) { this.err = e.message; }
     },
 
     // ---------- Admin paneli ----------

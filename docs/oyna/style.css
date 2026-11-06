@@ -572,3 +572,12 @@ button, a, .swatch, .topic, .mcard { touch-action: manipulation; -webkit-tap-hig
 .admin-list .who small { color: var(--muted); }
 .admin-list .c { font-weight: 800; white-space: nowrap; }
 .admin-msg { margin: 8px 0 0; font-weight: 800; color: #862e9c; }
+
+/* Kutu olasılıkları ve hesap ayarları */
+.odds { margin: 4px 0 12px; }
+.odds summary, .account-del summary { cursor: pointer; font-weight: 800; }
+.odds-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.odds-table th, .odds-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+.odds-table th:first-child, .odds-table td:first-child { text-align: left; }
+.account-del input { flex: 1; min-width: 140px; }
+.btn.danger { background: #ffe3e3; color: #c92a2a; border-color: #ffa8a8; }

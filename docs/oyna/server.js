@@ -163,6 +163,16 @@ window.LocalServer = (() => {
     const map = { ç: 'c', Ç: 'c', ğ: 'g', Ğ: 'g', ı: 'i', I: 'i', İ: 'i', ö: 'o', Ö: 'o', ş: 's', Ş: 's', ü: 'u', Ü: 'u', ' ': '.' };
     return String(raw || '').trim().replace(/[çÇğĞıIİöÖşŞüÜ ]/g, c => map[c]).toLowerCase();
   }
+  // Uygunsuz ad filtresi (App Store: kullanıcı içeriği süzülmeli). Kısa kelimeler yalnızca tam kelime olarak.
+  const BAD_WORDS = ['amk', 'aq', 'mk', 'oc', 'pic', 'sik', 'sikis', 'yarak', 'yarrak', 'got', 'ibne', 'gavat', 'kahpe', 'pust', 'puşt', 'fuck', 'shit', 'bitch', 'dick', 'porn', 'sex', 'seks', 'nazi'];
+  const BAD_PARTS = ['orospu', 'amcik', 'amina', 'siktir', 'sikerim', 'sikeyim', 'pezevenk', 'yavsak', 'serefsiz', 'gerizekali', 'fuck', 'porno', 'yarrak'];
+  function badName(...texts) {
+    for (const t of texts) {
+      const n = usernameNorm(t).replace(/[^a-z0-9]+/g, ' ').trim();
+      if (n.split(' ').some(w => BAD_WORDS.includes(w)) || BAD_PARTS.some(b => n.replace(/ /g, '').includes(b))) return true;
+    }
+    return false;
+  }
   async function hashPass(pass, salt) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + '|' + pass));
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -450,6 +460,7 @@ window.LocalServer = (() => {
     async register(b) {
       const name = className(b.name);
       if (name.length < 2) fail('Sınıf adı en az 2 karakter olmalı (ör. 6-A)');
+      if (badName(name)) fail('Bu ad uygun değil. Başka bir ad seç.');
       const password = String(b.password || '');
       if (password.length < 4) fail('Sınıf şifresi en az 4 karakter olmalı');
       const exists = 'Bu sınıf zaten kayıtlı. "Giriş yap" sekmesinden sınıf şifresiyle gir.';
@@ -466,6 +477,7 @@ window.LocalServer = (() => {
       if (display.length < 2 || display.length > 20 || !/^[\p{L} .\-]+$/u.test(display)) fail('Adın 2–20 harf olmalı (ör. Ali Y.)');
       const login = usernameNorm(b.username);
       if (!/^[a-z][a-z0-9._]{2,19}$/.test(login)) fail('Kullanıcı adı 3–20 karakter olmalı, harfle başlamalı; yalnızca harf, rakam, nokta ve alt çizgi (ör. ali.y)');
+      if (badName(display, login)) fail('Bu ad uygun değil. Başka bir ad seç.');
       const password = String(b.password || '');
       if (password.length < 4) fail('Şifren en az 4 karakter olmalı');
       const clsDoc = await cloud(() => CloudSync.getClass(cls));
@@ -559,6 +571,25 @@ window.LocalServer = (() => {
       if (!v || !(x >= 0 && x < WORLD.PLOT && y >= 0 && y < WORLD.PLOT)) fail('Oraya gidilemez');
       v.pos = { x, y }; save();
       return { village: v };
+    },
+    // Hesabı kalıcı sil (şifre yeniden sorulur)
+    async delete_account(b) {
+      P();
+      const a = account(), password = String(b.password || '');
+      if (a.cloud) await cloud(() => CloudSync.deleteAccount(CloudSync.emailFor(a.role, a.login, usernameNorm), password));
+      else if (a.hash !== '' && a.hash !== await hashPass(password, a.salt)) fail('Şifre yanlış');
+      localStorage.removeItem(SAVE_KEY(a.id));
+      accounts = accounts.filter(x => x.id !== a.id); saveAccounts();
+      curId = ''; S = null;
+      return { ok: true };
+    },
+    // Uygunsuz köy ya da ad bildirimi
+    async report_player(b) {
+      P();
+      const reason = String(b.reason || '').trim();
+      if (!reason) fail('Şikayet sebebini seç');
+      await cloud(() => CloudSync.report(b.target, b.name || '', reason));
+      return { ok: true, message: 'Şikayetin iletildi. Teşekkürler!' };
     },
     async admin_list() {
       P(); if (!isAdmin()) fail('Bu işlem yalnızca admin içindir');

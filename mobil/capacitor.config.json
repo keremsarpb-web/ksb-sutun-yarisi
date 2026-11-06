@@ -1,0 +1,14 @@
+{
+  "appId": "com.ksbgames.sutunyarisi",
+  "appName": "Sütun Yarışı",
+  "webDir": "www",
+  "backgroundColor": "#cfe8ff",
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false,
+    "scrollEnabled": true
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

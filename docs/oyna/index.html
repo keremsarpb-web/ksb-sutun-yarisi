@@ -357,6 +357,27 @@
             </div>
           </template>
         </div>
+        <details class="odds">
+          <summary>📊 Kutu olasılıkları</summary>
+          <p class="hint">Mystery Box'lar oyun içi coinle alınır ya da oynayarak kazanılır; gerçek para kullanılmaz. Sende zaten olan bir eşya çıkarsa yerine coin verilir.</p>
+          <div class="table-wrap">
+            <table class="odds-table">
+              <thead><tr><th>Ne çıkar?</th><th>Klasik</th><th>Altın</th><th>Kozmik</th></tr></thead>
+              <tbody>
+                <tr><td>Sıradan eşya</td><td>%49</td><td>%15</td><td>%0</td></tr>
+                <tr><td>Nadir eşya</td><td>%27</td><td>%34</td><td>%14</td></tr>
+                <tr><td>Destansı eşya</td><td>%11</td><td>%25</td><td>%32</td></tr>
+                <tr><td>Efsanevi eşya</td><td>%3,6</td><td>%10</td><td>%25</td></tr>
+                <tr><td>Galaksi Aurası (Mitik)</td><td>%2,7</td><td>%4,5</td><td>%8</td></tr>
+                <tr><td>Void Aura (Mitik)</td><td>%5</td><td>%7,8</td><td>%14</td></tr>
+                <tr><td>Göksel / Süpernova (İlahi)</td><td>%1,3</td><td>%2,5</td><td>%5,9</td></tr>
+                <tr><td>Sonsuzluk Aurası (Sonsuz)</td><td>%0,2</td><td>%0,5</td><td>%1</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="hint">Void Kutusu'ndan her zaman Void Aura çıkar. Çarklarda her dilimin şansı, dilim büyüklüğüyle değil sabit oranlarla belirlenir.</p>
+        </details>
+
         <div class="wheels">
           <template x-for="(info, k) in WHEEL_INFO" :key="k">
             <div class="wheel-card" :class="'wheel-' + k">
@@ -439,6 +460,19 @@
         </ul>
         <p class="hint" x-show="admin.loaded && !adminFiltered().length">Oyuncu bulunamadı.</p>
         <p class="admin-msg" x-show="admin.msg" x-text="admin.msg"></p>
+      </div>
+
+      <!-- Hesap ayarları (online sürüm ve uygulama): hesabı kalıcı silme -->
+      <div class="panel account-del" x-show="me && webApp">
+        <details>
+          <summary>⚙️ Hesap ayarları</summary>
+          <p class="hint">Hesabını silersen coinlerin, kutuların, kozmetiklerin, köyün ve sınav sonuçların sunucudan kalıcı olarak silinir. Bu geri alınamaz.</p>
+          <div class="row left">
+            <input type="password" x-model="delPass" placeholder="Şifren" autocomplete="current-password" aria-label="Şifren">
+            <button class="btn small danger" @click="deleteAccount()" :disabled="!delPass">Hesabımı kalıcı olarak sil</button>
+          </div>
+          <p class="hint"><a href="https://keremsarpb-web.github.io/ksb-sutun-yarisi/gizlilik.html" target="_blank" rel="noopener">Gizlilik politikası</a></p>
+        </details>
       </div>
     </div>
   </section>
@@ -859,7 +893,7 @@
       <button class="btn small" @click="centerOn(world.mine?.plot, world.mine?.pos)">🏠 Köyüme git</button>
       <select class="world-visit" @change="visitVillage($event.target.value); $event.target.value=''" aria-label="Bir köyü ziyaret et">
         <option value="">👀 Köy gez…</option>
-        <template x-for="v in world.villages" :key="v.uid"><option :value="v.plot" x-text="(isOnline(v) ? '🟢 ' : '') + v.name + (v.className ? ' · ' + v.className : '')"></option></template>
+        <template x-for="v in visibleVillages()" :key="v.uid"><option :value="v.plot" x-text="(isOnline(v) ? '🟢 ' : '') + v.name + (v.className ? ' · ' + v.className : '')"></option></template>
       </select>
       <span class="world-zoom"><button class="btn small" @click="zoomBy(0.8)" aria-label="Uzaklaş">−</button><button class="btn small" @click="zoomBy(1.25)" aria-label="Yakınlaş">+</button></span>
       <span class="coin-chip"><i>🪙</i><b x-text="coins"></b></span>
@@ -901,6 +935,21 @@
         <button class="btn small" @click="world.sel=null">Kapat</button>
       </div>
     </template>
+    <template x-if="world.visiting">
+      <div class="world-sel visit">
+        <span class="e">🏘️</span>
+        <div><b x-text="world.visiting.name + ' köyü'"></b><small x-text="world.visiting.className || ''"></small></div>
+        <select x-show="canReport()" @change="reportVillage($event.target.value); $event.target.value=''" aria-label="Şikayet et">
+          <option value="">🚩 Şikayet et…</option>
+          <option>Uygunsuz ad</option>
+          <option>Uygunsuz köy ya da yapılar</option>
+          <option>Rahatsız edici davranış</option>
+        </select>
+        <button class="btn small" @click="blockVillage()">🚫 Engelle</button>
+        <button class="btn small" @click="world.visiting=null">Kapat</button>
+      </div>
+    </template>
+    <p class="hint" x-show="world.blocked.length">Engellediğin <b x-text="world.blocked.length"></b> oyuncu gizli. <button class="linkbtn" @click="unblockAll()">Engellemeleri kaldır</button></p>
     <p class="hint world-help">Sürükleyerek dünyayı gez, tekerlek ya da iki parmakla yakınlaş, ⟲ ⟳ ile döndür. Gez modunda kendi köyünde bir kareye tıkla ya da ok tuşlarıyla yürü. Yeşil nokta şu an oyunda olanları gösterir.</p>
   </section>
 
