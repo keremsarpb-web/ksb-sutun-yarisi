@@ -26,6 +26,15 @@
     const net = { peer: null, conns: new Map(), host: null, loop: 0, guestState: null, rewarded: {} };
 
     const baseLogout = g.logout;
+    // Admin hediye coin gönderince
+    addEventListener('sy-gift', e => {
+      const self = window.Alpine && document.querySelector('[x-data]') && Alpine.$data(document.querySelector('[x-data]'));
+      if (!self) return;
+      self.notice = `🎁 Hesabına ${e.detail.coins} coin geldi!`;
+      self.loadMe();
+      if (self.me?.is_admin) self.adminLoad();
+      setTimeout(() => { if (self.notice.startsWith('🎁')) self.notice = ''; }, 6000);
+    });
     Object.assign(g, {
       // Çıkışta sunucu oturumu da kapanır; kayıt önce sunucuya gönderilir
       async logout() { await window.CloudSync?.signOut(); return baseLogout.call(this); },

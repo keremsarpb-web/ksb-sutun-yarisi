@@ -91,7 +91,8 @@ window.CloudSync = (() => {
       const { auth, db } = await ready();
       if (auth.currentUser?.uid !== p.uid) return;
       const now = Date.now();
-      await db.collection('users').doc(p.uid).set({ ...p.meta, save: JSON.stringify(p.save), updatedAt: now });
+      // merge: adminin bıraktığı hediye coin (giftCoins) silinmesin
+      await db.collection('users').doc(p.uid).set({ ...p.meta, save: JSON.stringify(p.save), updatedAt: now }, { merge: true });
       if (p.publicInfo) await db.collection('public').doc(p.uid).set({ ...p.publicInfo, updatedAt: now });
     } catch (e) { console.warn('Kayıt sunucuya gönderilemedi', e); }
   }
@@ -105,9 +106,52 @@ window.CloudSync = (() => {
   }
   async function signOut() {
     await flush();
+    unwatch?.(); unwatch = null;
     try { const { auth } = await ready(); await auth.signOut(); } catch {}
   }
   const currentUid = async () => { try { return (await ready()).auth.currentUser?.uid || ''; } catch { return ''; } };
 
-  return { ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
+  // ---- Admin: hediye coin ----
+  // Admin, oyuncunun kaydına "giftCoins" bırakır; oyuncunun oyunu bunu alıp coinlerine ekler.
+  async function adminList() {
+    const { db } = await ready();
+    const snap = await db.collection('users').get();
+    return snap.docs.map(d => {
+      let p = {};
+      try { p = JSON.parse(d.data().save || '{}').player || {}; } catch {}
+      const u = d.data();
+      return { id: d.id, name: p.name || u.login, username: u.role === 'student' ? u.login : '', role: u.role || p.role,
+        class_name: u.cls || p.className || '', color: p.color || '#adb5bd', coins: (p.coins | 0) + (u.giftCoins | 0) };
+    }).sort((a, b) => (a.role > b.role ? 1 : a.role < b.role ? -1 : a.name.localeCompare(b.name, 'tr')));
+  }
+  async function adminGive(uids, amount) {
+    const { db } = await ready();
+    const inc = firebase.firestore.FieldValue.increment(amount);
+    for (let i = 0; i < uids.length; i += 400) {
+      const batch = db.batch();
+      for (const uid of uids.slice(i, i + 400)) batch.update(db.collection('users').doc(uid), { giftCoins: inc });
+      await batch.commit();
+    }
+  }
+  // Kendi kaydındaki hediyeyi izler; gelen coin bir kez (işlemle) alınır
+  let unwatch = null;
+  async function watchGifts(uid, onGift) {
+    const { db } = await ready();
+    unwatch?.();
+    const ref = db.collection('users').doc(uid);
+    unwatch = ref.onSnapshot(async snap => {
+      if (!((snap.data()?.giftCoins | 0) > 0)) return;
+      try {
+        const n = await db.runTransaction(async tx => {
+          const d = await tx.get(ref);
+          const g = d.data()?.giftCoins | 0;
+          if (g > 0) tx.update(ref, { giftCoins: 0 });
+          return g;
+        });
+        if (n > 0) onGift(n);
+      } catch (e) { console.warn('Hediye alınamadı', e); }
+    }, () => {});
+  }
+
+  return { adminList, adminGive, watchGifts, ready, emailFor, signUp, signIn, checkClassPassword, getClass, addClass, pull, schedulePush, flush, leaderboard, signOut, currentUid };
 })();

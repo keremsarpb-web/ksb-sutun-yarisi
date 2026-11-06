@@ -1,5 +1,5 @@
 // Tarayıcı sürümü: önce ağ, ağ yoksa önbellek. Böylece güncellemeler hemen gelir, internetsiz de açılır.
-const CACHE = 'sutun-yarisi-web-v4';
+const CACHE = 'sutun-yarisi-web-v5';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr" data-version="1.9.1">
+<html lang="tr" data-version="1.9.2">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,16 +16,16 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=1.9.1">
-<script src="vendor/three.min.js?v=1.9.1"></script>
-<script src="game.js?v=1.9.1"></script>
-<script src="char3d.js?v=1.9.1"></script>
-<script src="matematik.js?v=1.9.1"></script>
-<script src="cloud.js?v=1.9.1"></script>
-<script src="server.js?v=1.9.1"></script>
-<script src="web.js?v=1.9.1"></script>
-<link rel="stylesheet" href="web.css?v=1.9.1">
-<script defer src="vendor/alpine.min.js?v=1.9.1"></script>
+<link rel="stylesheet" href="style.css?v=1.9.2">
+<script src="vendor/three.min.js?v=1.9.2"></script>
+<script src="game.js?v=1.9.2"></script>
+<script src="char3d.js?v=1.9.2"></script>
+<script src="matematik.js?v=1.9.2"></script>
+<script src="cloud.js?v=1.9.2"></script>
+<script src="server.js?v=1.9.2"></script>
+<script src="web.js?v=1.9.2"></script>
+<link rel="stylesheet" href="web.css?v=1.9.2">
+<script defer src="vendor/alpine.min.js?v=1.9.2"></script>
 </head>
 <body>
 <div class="app" x-data="game()" x-init="init()" x-cloak>
@@ -51,6 +51,7 @@
   <p class="web-tip" x-show="installTip" x-text="installTip" @click="installTip=''" role="status"></p>
 
   <p class="error" x-show="err" x-text="err" @click="err=''"></p>
+  <p class="notice" x-show="notice" x-text="notice" @click="notice=''" role="status"></p>
 
   <!-- Özel hesaplara bir kerelik tebrik -->
   <div class="champion" x-show="champion" x-transition.opacity role="dialog" aria-modal="true" aria-labelledby="champ-title" @keydown.escape.window="champion=false">
@@ -396,6 +397,39 @@
           </template>
         </ol>
         <p class="hint" x-show="boardTab==='class' && !board.length">Henüz maç oynanmadı.</p>
+      </div>
+
+      <!-- Admin paneli: yalnızca admin hesabına görünür -->
+      <div class="panel admin" x-show="me?.is_admin" x-effect="me?.is_admin && !admin.loaded && !admin.busy && adminLoad()">
+        <div class="admin-head">
+          <h2>🛡️ Admin paneli</h2>
+          <button class="btn small" @click="adminLoad()" :disabled="admin.busy">Yenile</button>
+        </div>
+        <p class="hint">Oyunculara coin ver. Oyuncu açıksa coin birkaç saniye içinde hesabına geçer.</p>
+        <div class="admin-amount">
+          <label for="admin-amt">Miktar</label>
+          <input id="admin-amt" type="number" min="1" max="100000" x-model.number="admin.amount">
+          <template x-for="v in [100, 500, 1000, 5000]" :key="v">
+            <button class="pill" :class="admin.amount===v && 'on'" @click="admin.amount=v" x-text="v"></button>
+          </template>
+        </div>
+        <div class="admin-actions">
+          <button class="btn primary" @click="adminGive('self')" :disabled="admin.busy">🪙 Kendime ver</button>
+          <button class="btn" @click="adminGive('all')" :disabled="admin.busy">Herkese ver</button>
+        </div>
+        <input class="admin-search" x-model="admin.q" placeholder="Oyuncu ara (ad, kullanıcı adı, sınıf)" aria-label="Oyuncu ara">
+        <ul class="admin-list">
+          <template x-for="u in adminFiltered()" :key="u.id">
+            <li>
+              <span class="dot" :style="'background:' + u.color"></span>
+              <span class="who"><b x-text="u.name"></b><small x-text="[u.username, u.class_name, u.role === 'class' ? 'sınıf' : ''].filter(Boolean).join(' · ')"></small></span>
+              <span class="c" x-text="'🪙 ' + u.coins"></span>
+              <button class="btn small primary" @click="adminGive(u.id)" :disabled="admin.busy" x-text="'+' + (admin.amount || 0)"></button>
+            </li>
+          </template>
+        </ul>
+        <p class="hint" x-show="admin.loaded && !adminFiltered().length">Oyuncu bulunamadı.</p>
+        <p class="admin-msg" x-show="admin.msg" x-text="admin.msg"></p>
       </div>
     </div>
   </section>
@@ -807,7 +841,7 @@
 
   <section class="panel" x-show="screen==='loading'"><div class="spinner"></div></section>
 </div>
-<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.1</div>
+<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.2</div>
 <div class="update-bar" x-data x-show="$store.update.ready" x-cloak>
   <span>Yeni güncelleme hazır: <b x-text="'v' + $store.update.version"></b></span>
   <button class="btn small" @click="location.reload()">Şimdi güncelle</button>

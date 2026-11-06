@@ -111,6 +111,19 @@ window.LocalServer = (() => {
     }
     try { localStorage.setItem(SAVE_KEY(curId), JSON.stringify(S)); } catch {}
   }
+  // Admin paneli: sunucudaki "kerem" öğrenci hesabı (Firestore kuralı da yalnızca ona izin verir)
+  const ADMINS = ['kerem'];
+  const isAdmin = () => { const a = account(); return !!a?.cloud && a.role === 'student' && ADMINS.includes(a.login); };
+  // Adminin verdiği hediye coin gelince kayda eklenir ve ekranda gösterilir
+  function watchGifts(uid) {
+    if (!window.CloudSync) return;
+    CloudSync.watchGifts(uid, n => {
+      if (curId !== uid) return;
+      load(); if (!S.player) return;
+      addCoins(n); save();
+      dispatchEvent(new CustomEvent('sy-gift', { detail: { coins: n } }));
+    }).catch(() => {});
+  }
   // Başka cihazda oynandıysa sunucudaki daha yeni kaydı al (oturum başına bir kez)
   const synced = {};
   async function syncDown() {
@@ -123,6 +136,7 @@ window.LocalServer = (() => {
       load();
       if (remote && (remote.updatedAt || 0) > (S.updatedAt || 0)) { S = { ...remote, match: null, queue: null }; }
       pushed[curId] = JSON.stringify({ ...S, match: null, queue: null, updatedAt: 0 });
+      watchGifts(curId);
     } catch { synced[curId] = false; }
   }
   const P = () => { const p = account() && load().player; if (!p) fail('Oturum bulunamadı', 401); return p; };
@@ -184,6 +198,7 @@ window.LocalServer = (() => {
     save();
     const player = publicPlayer(p);
     if (p.role === 'student') { player.username = p.username || account()?.login || ''; player.class_name = p.className || ''; }
+    if (isAdmin()) player.is_admin = true;
     return { player, boxes, owned, coins: p.coins, coin_bonus: coinBonus(p.aura), free_spin: p.lastSpin !== today(), champion };
   }
 
@@ -465,6 +480,7 @@ window.LocalServer = (() => {
         if (d?.save) localStorage.setItem(SAVE_KEY(uid), d.save);
         synced[uid] = true; S = null; curId = uid; load();
         pushed[uid] = JSON.stringify({ ...S, match: null, queue: null, updatedAt: 0 });
+        watchGifts(uid);
         return { token: uid };
       }
       // 2) Bu cihazdaki hesap (internet yoksa ya da sunucudan önce açılmışsa)
@@ -486,6 +502,22 @@ window.LocalServer = (() => {
       return { token: a.id };
     },
     async me() { P(); await syncDown(); return profile(); },
+    async admin_list() {
+      P(); if (!isAdmin()) fail('Bu işlem yalnızca admin içindir');
+      await CloudSync.flush();
+      return { players: await cloud(() => CloudSync.adminList()) };
+    },
+    async admin_give(b) {
+      P(); if (!isAdmin()) fail('Bu işlem yalnızca admin içindir');
+      const amount = Math.floor(Number(b.amount) || 0);
+      if (amount < 1 || amount > 100000) fail('Miktar 1 ile 100.000 arasında olmalı');
+      let uids, msg;
+      if (b.target === 'self') { uids = [curId]; msg = `Kendine ${amount} coin verdin.`; }
+      else if (b.target === 'all') { uids = (await cloud(() => CloudSync.adminList())).map(u => u.id); msg = `${uids.length} oyuncuya ${amount} coin verildi.`; }
+      else { uids = [String(b.target)]; msg = `Oyuncuya ${amount} coin verildi. Oyunu açıksa birkaç saniyede hesabına geçer.`; }
+      await cloud(() => CloudSync.adminGive(uids, amount));
+      return { ok: true, message: msg };
+    },
     look(b) {
       const p = P();
       if (COLORS.includes(b.color)) p.color = b.color;

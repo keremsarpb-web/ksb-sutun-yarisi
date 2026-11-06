@@ -188,6 +188,8 @@ function game() {
     screen: 'loading', err: '',
     form: { name: '', class_name: '', class_password: '', display_name: '', username: '', password: '', password2: '', color: COLORS[5], shape: 'round', eyes: 'normal', mouth: 'smile', hat: '', aura: '' },
     compact: false,
+    notice: '',
+    admin: { list: [], q: '', amount: 500, busy: false, loaded: false, msg: '' },
     me: null, boxes: [], owned: { hat: [], aura: [], emote: [], shape: [] }, board: [], boardStudents: [], boardTab: 'class',
     coins: 0, coinBonus: 0, freeSpin: false,
     queue: { count: 0, max: 5, start_in: null },
@@ -445,6 +447,35 @@ function game() {
         this.loot = r.loot;
       } catch (e) { this.err = e.message; }
       this.opening = null;
+    },
+
+    // ---------- Admin paneli ----------
+    async adminLoad() {
+      const a = this.admin;
+      a.busy = true;
+      try { a.list = (await this.api('admin_list')).players; a.loaded = true; } catch (e) { a.msg = e.message; }
+      a.busy = false;
+    },
+
+    adminFiltered() {
+      const q = this.admin.q.trim().toLocaleLowerCase('tr');
+      const list = q ? this.admin.list.filter(u => [u.name, u.username, u.class_name].join(' ').toLocaleLowerCase('tr').includes(q)) : this.admin.list;
+      return list.slice(0, 100);
+    },
+
+    // target: oyuncu kimliği, 'self' ya da 'all'
+    async adminGive(target) {
+      const a = this.admin, amount = Math.floor(Number(a.amount) || 0);
+      if (amount < 1 || amount > 100000) { a.msg = 'Miktar 1 ile 100.000 arasında olmalı'; return; }
+      if (target === 'all' && !confirm(`Bütün oyunculara ${amount} coin verilsin mi?`)) return;
+      a.busy = true; a.msg = '';
+      try {
+        const r = await this.api('admin_give', { target, amount });
+        a.msg = r.message;
+        if (r.coins !== undefined) this.coins = r.coins;
+        await this.adminLoad();
+      } catch (e) { a.msg = e.message; }
+      a.busy = false;
     },
 
     boxCount(kind) { return this.boxes.filter(b => b.kind === kind).length; },

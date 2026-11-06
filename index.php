@@ -44,6 +44,7 @@ $v = '?v=' . APP_VERSION;
   </header>
 
   <p class="error" x-show="err" x-text="err" @click="err=''"></p>
+  <p class="notice" x-show="notice" x-text="notice" @click="notice=''" role="status"></p>
 
   <!-- Özel hesaplara bir kerelik tebrik -->
   <div class="champion" x-show="champion" x-transition.opacity role="dialog" aria-modal="true" aria-labelledby="champ-title" @keydown.escape.window="champion=false">
@@ -358,6 +359,39 @@ $v = '?v=' . APP_VERSION;
           </template>
         </ol>
         <p class="hint" x-show="boardTab==='class' && !board.length">Henüz maç oynanmadı.</p>
+      </div>
+
+      <!-- Admin paneli: yalnızca admin hesabına görünür -->
+      <div class="panel admin" x-show="me?.is_admin" x-effect="me?.is_admin && !admin.loaded && !admin.busy && adminLoad()">
+        <div class="admin-head">
+          <h2>🛡️ Admin paneli</h2>
+          <button class="btn small" @click="adminLoad()" :disabled="admin.busy">Yenile</button>
+        </div>
+        <p class="hint">Oyunculara coin ver. Oyuncu açıksa coin birkaç saniye içinde hesabına geçer.</p>
+        <div class="admin-amount">
+          <label for="admin-amt">Miktar</label>
+          <input id="admin-amt" type="number" min="1" max="100000" x-model.number="admin.amount">
+          <template x-for="v in [100, 500, 1000, 5000]" :key="v">
+            <button class="pill" :class="admin.amount===v && 'on'" @click="admin.amount=v" x-text="v"></button>
+          </template>
+        </div>
+        <div class="admin-actions">
+          <button class="btn primary" @click="adminGive('self')" :disabled="admin.busy">🪙 Kendime ver</button>
+          <button class="btn" @click="adminGive('all')" :disabled="admin.busy">Herkese ver</button>
+        </div>
+        <input class="admin-search" x-model="admin.q" placeholder="Oyuncu ara (ad, kullanıcı adı, sınıf)" aria-label="Oyuncu ara">
+        <ul class="admin-list">
+          <template x-for="u in adminFiltered()" :key="u.id">
+            <li>
+              <span class="dot" :style="'background:' + u.color"></span>
+              <span class="who"><b x-text="u.name"></b><small x-text="[u.username, u.class_name, u.role === 'class' ? 'sınıf' : ''].filter(Boolean).join(' · ')"></small></span>
+              <span class="c" x-text="'🪙 ' + u.coins"></span>
+              <button class="btn small primary" @click="adminGive(u.id)" :disabled="admin.busy" x-text="'+' + (admin.amount || 0)"></button>
+            </li>
+          </template>
+        </ul>
+        <p class="hint" x-show="admin.loaded && !adminFiltered().length">Oyuncu bulunamadı.</p>
+        <p class="admin-msg" x-show="admin.msg" x-text="admin.msg"></p>
       </div>
     </div>
   </section>

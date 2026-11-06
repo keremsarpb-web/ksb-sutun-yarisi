@@ -162,6 +162,20 @@ function class_by_id($id): array
 
 // Özel hesaplar: ilk girişte "Tebrikler, 1. sensin!" mesajı ve bir kez Void Kutusu
 const CHAMPIONS = ['arden', 'alptuna'];
+// Admin paneli: bu kullanıcı adlarındaki öğrenci hesapları oyunculara coin verebilir
+const ADMINS = ['kerem'];
+
+function is_admin(array $p): bool
+{
+    return ($p['role'] ?? '') === 'student' && in_array($p['name'], ADMINS, true);
+}
+
+function current_admin(array $in): array
+{
+    $p = current_player($in);
+    if (!is_admin($p)) fail('Bu işlem yalnızca admin içindir', 403);
+    return $p;
+}
 
 function champion_gift(array $p): bool
 {
@@ -188,9 +202,11 @@ function profile(array $p): array
         $player['username'] = $p['name'];
         $player['class_name'] = $p['class_id'] ? (string) q('SELECT name FROM players WHERE id = ?', [$p['class_id']])->fetchColumn() : '';
     }
-    return ['player' => $player, 'boxes' => $boxes, 'owned' => $owned, 'coins' => (int) ($p['coins'] ?? 0),
+    $out = ['player' => $player, 'boxes' => $boxes, 'owned' => $owned, 'coins' => (int) ($p['coins'] ?? 0),
         'coin_bonus' => coin_bonus((string) $p['aura']), 'free_spin' => ($p['last_spin'] ?? null) !== date('Y-m-d'),
         'champion' => $gift];
+    if (is_admin($p)) $out['player']['is_admin'] = true;
+    return $out;
 }
 
 function owns(int $pid, string $type, string $key): bool
@@ -732,6 +748,38 @@ try {
             if (mb_strlen($password) < 6) fail('Şifre en az 6 karakter olmalı');
             q('UPDATE players SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $p['id']]);
             out(profile(current_player($in)));
+
+        // ---------- Admin paneli ----------
+
+        case 'admin_list':
+            current_admin($in);
+            $rows = q("SELECT p.id, p.name, p.display_name, p.role, p.color, p.coins, c.name AS class_label
+                       FROM players p LEFT JOIN players c ON c.id = p.class_id
+                       WHERE p.role IN ('class', 'student') ORDER BY p.role, c.name, p.display_name, p.name")->fetchAll();
+            out(['players' => array_map(fn($r) => [
+                'id' => (int) $r['id'], 'name' => $r['display_name'] !== '' ? $r['display_name'] : $r['name'],
+                'username' => $r['role'] === 'student' ? $r['name'] : '', 'role' => $r['role'],
+                'class_name' => (string) $r['class_label'], 'color' => $r['color'], 'coins' => (int) $r['coins'],
+            ], $rows)]);
+
+        case 'admin_give':
+            $p = current_admin($in);
+            $amount = (int) ($in['amount'] ?? 0);
+            if ($amount < 1 || $amount > 100000) fail('Miktar 1 ile 100.000 arasında olmalı');
+            $target = $in['target'] ?? '';
+            if ($target === 'self') {
+                add_coins((int) $p['id'], $amount);
+                $msg = "Kendine $amount coin verdin.";
+            } elseif ($target === 'all') {
+                $n = q("UPDATE players SET coins = coins + ? WHERE role IN ('class', 'student')", [$amount])->rowCount();
+                $msg = "$n oyuncuya $amount coin verildi.";
+            } else {
+                $t = q("SELECT * FROM players WHERE id = ? AND role IN ('class', 'student')", [(int) $target])->fetch();
+                if (!$t) fail('Oyuncu bulunamadı');
+                add_coins((int) $t['id'], $amount);
+                $msg = ($t['display_name'] !== '' ? $t['display_name'] : $t['name']) . " adlı oyuncuya $amount coin verildi.";
+            }
+            out(['ok' => true, 'message' => $msg, 'coins' => (int) q('SELECT coins FROM players WHERE id = ?', [$p['id']])->fetchColumn()]);
 
         case 'teacher_overview':
             current_teacher($in);
