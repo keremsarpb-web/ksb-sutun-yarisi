@@ -1,5 +1,6 @@
-// Köyüm: herkesin coinle kendi köyünü kurduğu ortak dünya (online sürüm).
-// Kendi köyün kayıtta (LocalServer) tutulur; herkesin görmesi için Firestore'daki world/{uid} belgesine yansıtılır.
+// Köyüm: herkesin coinle kendi köyünü kurduğu ortak dünya. İki sürümde de aynı kod:
+// - Okul sürümü: köyler okul sunucusunda (api.php, villages tablosu); diğer köyler birkaç saniyede bir çekilir.
+// - Tarayıcı sürümü: kendi köyün kayıtta (LocalServer), herkesin görmesi için Firestore'daki world/{uid} belgesine yansır.
 window.WORLD_ITEMS = {
   // anahtar: [ad, simge, fiyat, saatlik coin, tür]
   flower:   ['Çiçek', '🌷', 20, 0, 'doğa'],
@@ -31,6 +32,7 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
 (() => {
   const base = window.game;
   const PLOT = WORLD.PLOT;
+  const online = () => !!window.CloudSync;
   const CATS = ['ev', 'işletme', 'doğa', 'yol', 'süs'];
 
   window.game = function () {
@@ -47,7 +49,8 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
         try {
           let r = await this.api('village_get');
           if (!r.village) {
-            const plot = await CloudSync.worldAllocPlot();
+            // Online'da arsa Firebase sayacından, okul sürümünde sunucudan gelir
+            const plot = online() ? await CloudSync.worldAllocPlot() : undefined;
             r = await this.api('village_init', { plot });
           }
           w.mine = r.village;
@@ -58,7 +61,13 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
           await this.$nextTick();
           World3D.init(document.querySelector('.w3d'), { onTile: (x, y) => this.tileClick(x, y) });
           unwatch?.();
-          unwatch = await CloudSync.worldWatch(list => { w.villages = list; });
+          if (online()) unwatch = await CloudSync.worldWatch(list => { w.villages = list; });
+          else {
+            const pull = () => this.api('village_list').then(r => { w.villages = r.villages; }).catch(() => {});
+            await pull();
+            const t = setInterval(() => { if (this.screen === 'world') pull(); }, 4000);
+            unwatch = () => clearInterval(t);
+          }
           clearInterval(beat);
           beat = setInterval(() => { if (this.screen === 'world') this.publishVillage(true); else clearInterval(beat); }, 60000);
           this.worldIncome();
@@ -74,6 +83,8 @@ window.WORLD = { PLOT: 8, PER_ROW: 6, MAX_HOURS: 12 };
       async publishVillage(heartbeat = false) {
         const v = this.world.mine, me = this.me;
         if (!v || !me) return;
+        // Okul sürümünde köy zaten sunucuda; yalnızca "oyunda" bilgisi tazelenir
+        if (!online()) { if (heartbeat) this.api('village_ping').catch(() => {}); return; }
         try {
           await CloudSync.worldPublish({
             name: me.name, className: me.class_name || '', plot: v.plot, tiles: v.tiles, pos: v.pos,

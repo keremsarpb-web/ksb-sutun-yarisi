@@ -87,6 +87,15 @@ function migrate(): void
     if (!q("SHOW COLUMNS FROM players LIKE 'class_id'")->fetch()) {
         q("ALTER TABLE players ADD COLUMN display_name VARCHAR(30) NOT NULL DEFAULT '', ADD COLUMN class_id INT NULL, ADD INDEX (class_id)");
     }
+    q("CREATE TABLE IF NOT EXISTS villages (
+        player_id INT PRIMARY KEY,
+        plot INT NOT NULL UNIQUE,
+        tiles TEXT NOT NULL,
+        pos_x TINYINT NOT NULL DEFAULT 3,
+        pos_y TINYINT NOT NULL DEFAULT 3,
+        last_collect BIGINT NOT NULL,
+        last_seen BIGINT NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB");
     if (!q("SHOW COLUMNS FROM players LIKE 'champion_gift'")->fetch()) {
         q("ALTER TABLE players ADD COLUMN champion_gift TINYINT NOT NULL DEFAULT 0");
     }
@@ -162,6 +171,66 @@ function class_by_id($id): array
 
 // Özel hesaplar: ilk girişte "Tebrikler, 1. sensin!" mesajı ve bir kez Void Kutusu
 const CHAMPIONS = ['arden', 'alptuna'];
+// Köyüm: yapı => [fiyat, saatlik coin]. world.js'teki WORLD_ITEMS ile aynı tutulmalı.
+const WORLD_ITEMS = [
+    'flower' => [20, 0],
+    'tree' => [30, 0],
+    'pine' => [40, 0],
+    'pond' => [120, 0],
+    'road' => [5, 0],
+    'fence' => [10, 0],
+    'lamp' => [60, 0],
+    'tent' => [50, 0],
+    'house' => [150, 0],
+    'villa' => [400, 0],
+    'tower' => [1200, 0],
+    'shop' => [300, 10],
+    'bakery' => [500, 20],
+    'farm' => [600, 25],
+    'cafe' => [800, 35],
+    'market' => [1500, 55],
+    'school' => [2000, 60],
+    'hospital' => [3000, 80],
+    'factory' => [5000, 150],
+    'park' => [700, 0],
+    'stadium' => [4000, 0],
+    'castle' => [10000, 0],
+    'rocket' => [25000, 0],
+];
+const WORLD_PLOT = 8;
+const WORLD_MAX_HOURS = 12;
+
+function village_of(int $pid): ?array
+{
+    $v = q('SELECT * FROM villages WHERE player_id = ?', [$pid])->fetch();
+    return $v ?: null;
+}
+
+function village_out(array $v): array
+{
+    return ['plot' => (int) $v['plot'], 'tiles' => (object) (json_decode($v['tiles'], true) ?: []),
+        'pos' => ['x' => (int) $v['pos_x'], 'y' => (int) $v['pos_y']], 'lastCollect' => (int) $v['last_collect']];
+}
+
+// İşletmelerin kazancını ekler (en fazla 12 saat birikir) ve saati sıfırlar
+function village_collect(int $pid, array $v): int
+{
+    $tiles = json_decode($v['tiles'], true) ?: [];
+    $perHour = array_sum(array_map(fn($k) => WORLD_ITEMS[$k][1] ?? 0, $tiles));
+    $hours = min(WORLD_MAX_HOURS, max(0, (now_ms() - (int) $v['last_collect']) / 3600000));
+    $gained = (int) floor($perHour * $hours);
+    q('UPDATE villages SET last_collect = ? WHERE player_id = ?', [now_ms(), $pid]);
+    add_coins($pid, $gained);
+    return $gained;
+}
+
+function village_cell($in): array
+{
+    $x = (int) ($in['x'] ?? -1); $y = (int) ($in['y'] ?? -1);
+    if ($x < 0 || $x >= WORLD_PLOT || $y < 0 || $y >= WORLD_PLOT) fail('Kendi arsanın içine kurabilirsin');
+    return [$x, $y, $x . '_' . $y];
+}
+
 // Admin paneli: bu kullanıcı adlarındaki öğrenci hesapları oyunculara coin verebilir
 const ADMINS = ['kerem'];
 
@@ -748,6 +817,110 @@ try {
             if (mb_strlen($password) < 6) fail('Şifre en az 6 karakter olmalı');
             q('UPDATE players SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $p['id']]);
             out(profile(current_player($in)));
+
+        // ---------- Köyüm (ortak dünya) ----------
+
+        case 'village_get':
+            $p = current_player($in);
+            $v = village_of((int) $p['id']);
+            out(['village' => $v ? village_out($v) : null]);
+
+        case 'village_init':
+            $p = current_player($in);
+            if (!village_of((int) $p['id'])) {
+                // Arsa numarası sırayla verilir; aynı anda gelen iki istek aynı arsayı alamaz
+                if (!lock('village_plot')) fail('Sunucu meşgul, tekrar dene');
+                try {
+                    $plot = (int) q('SELECT COALESCE(MAX(plot) + 1, 0) FROM villages')->fetchColumn();
+                    q('INSERT IGNORE INTO villages (player_id, plot, tiles, last_collect, last_seen) VALUES (?, ?, ?, ?, ?)', [$p['id'], $plot, '{}', now_ms(), now_ms()]);
+                } finally {
+                    unlock('village_plot');
+                }
+            }
+            out(['village' => village_out(village_of((int) $p['id']))]);
+
+        case 'village_build':
+            $p = current_player($in);
+            $pid = (int) $p['id'];
+            $v = village_of($pid);
+            if (!$v) fail('Önce köyünü aç');
+            $key = (string) ($in['key'] ?? '');
+            if (!isset(WORLD_ITEMS[$key])) fail('Böyle bir yapı yok');
+            [, , $cell] = village_cell($in);
+            if (!lock("village_$pid")) fail('Sunucu meşgul, tekrar dene');
+            try {
+                $v = village_of($pid);
+                $tiles = json_decode($v['tiles'], true) ?: [];
+                if (isset($tiles[$cell])) fail('Burası dolu');
+                $price = WORLD_ITEMS[$key][0];
+                village_collect($pid, $v);
+                if (q('UPDATE players SET coins = coins - ? WHERE id = ? AND coins >= ?', [$price, $pid, $price])->rowCount() !== 1) fail("Bu yapı için $price coin gerek");
+                $tiles[$cell] = $key;
+                q('UPDATE villages SET tiles = ?, last_seen = ? WHERE player_id = ?', [json_encode($tiles), now_ms(), $pid]);
+            } finally {
+                unlock("village_$pid");
+            }
+            out(['village' => village_out(village_of($pid))] + profile(current_player($in)));
+
+        case 'village_sell':
+            $p = current_player($in);
+            $pid = (int) $p['id'];
+            [, , $cell] = village_cell($in);
+            if (!lock("village_$pid")) fail('Sunucu meşgul, tekrar dene');
+            try {
+                $v = village_of($pid);
+                $tiles = $v ? (json_decode($v['tiles'], true) ?: []) : [];
+                if (!isset($tiles[$cell])) fail('Burada yapı yok');
+                village_collect($pid, $v);
+                $refund = intdiv(WORLD_ITEMS[$tiles[$cell]][0] ?? 0, 2);
+                unset($tiles[$cell]);
+                q('UPDATE villages SET tiles = ? WHERE player_id = ?', [json_encode((object) $tiles), $pid]);
+                add_coins($pid, $refund);
+            } finally {
+                unlock("village_$pid");
+            }
+            out(['village' => village_out(village_of($pid)), 'refund' => $refund] + profile(current_player($in)));
+
+        case 'village_collect':
+            $p = current_player($in);
+            $pid = (int) $p['id'];
+            if (!lock("village_$pid")) fail('Sunucu meşgul, tekrar dene');
+            try {
+                $v = village_of($pid);
+                if (!$v) fail('Önce köyünü aç');
+                $gained = village_collect($pid, $v);
+            } finally {
+                unlock("village_$pid");
+            }
+            out(['village' => village_out(village_of($pid)), 'gained' => $gained] + profile(current_player($in)));
+
+        case 'village_move':
+            $p = current_player($in);
+            [$x, $y] = village_cell($in);
+            q('UPDATE villages SET pos_x = ?, pos_y = ?, last_seen = ? WHERE player_id = ?', [$x, $y, now_ms(), $p['id']]);
+            $v = village_of((int) $p['id']);
+            if (!$v) fail('Önce köyünü aç');
+            out(['village' => village_out($v)]);
+
+        case 'village_ping':
+            $p = current_player($in);
+            q('UPDATE villages SET last_seen = ? WHERE player_id = ?', [now_ms(), $p['id']]);
+            out(['ok' => true]);
+
+        // Diğer oyuncuların köyleri (kendi köyün hariç)
+        case 'village_list':
+            $p = current_player($in);
+            q('UPDATE villages SET last_seen = ? WHERE player_id = ?', [now_ms(), $p['id']]);
+            $rows = q("SELECT v.*, pl.name, pl.display_name, pl.role, pl.color, pl.shape, pl.eyes, pl.mouth, pl.hat, pl.aura, c.name AS class_label
+                       FROM villages v JOIN players pl ON pl.id = v.player_id LEFT JOIN players c ON c.id = pl.class_id
+                       WHERE v.player_id <> ?", [$p['id']])->fetchAll();
+            out(['villages' => array_map(fn($r) => [
+                'uid' => 'p' . $r['player_id'], 'name' => $r['display_name'] !== '' ? $r['display_name'] : $r['name'],
+                'className' => (string) $r['class_label'], 'plot' => (int) $r['plot'],
+                'tiles' => (object) (json_decode($r['tiles'], true) ?: []), 'pos' => ['x' => (int) $r['pos_x'], 'y' => (int) $r['pos_y']],
+                'lastSeen' => (int) $r['last_seen'],
+                'look' => ['color' => $r['color'], 'shape' => $r['shape'], 'eyes' => $r['eyes'], 'mouth' => $r['mouth'], 'hat' => $r['hat'], 'aura' => $r['aura']],
+            ], $rows)]);
 
         // ---------- Admin paneli ----------
 

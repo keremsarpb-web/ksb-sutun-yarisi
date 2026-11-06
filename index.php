@@ -21,6 +21,9 @@ $v = '?v=' . APP_VERSION;
 <script src="vendor/three.min.js<?= $v ?>"></script>
 <script src="game.js<?= $v ?>"></script>
 <script src="char3d.js<?= $v ?>"></script>
+<script src="world3d.js<?= $v ?>"></script>
+<script src="world.js<?= $v ?>"></script>
+<link rel="stylesheet" href="world.css<?= $v ?>">
 <script defer src="vendor/alpine.min.js<?= $v ?>"></script>
 </head>
 <body>
@@ -255,6 +258,12 @@ $v = '?v=' . APP_VERSION;
         <h2>Turnuva maçı</h2>
         <p>2–5 oyuncu, 10 soru. Doğru bilen sütununda yükselir, yanlış bilen düşer ve 1 can kaybeder. 3 canı biten elenir. En yüksekte kalan kazanır ve <b>Mystery Box</b> alır.</p>
         <button class="btn primary big" @click="findMatch()">Rastgele maç bul</button>
+      </div>
+
+      <div class="panel village-cta">
+        <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
+        <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
+        <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
       </div>
 
       <div class="panel prep">
@@ -799,6 +808,62 @@ $v = '?v=' . APP_VERSION;
         </div>
       </div>
     </template>
+  </section>
+
+  <!-- Köyüm: herkesin aynı 3D dünyada köy kurduğu ortak dünya -->
+  <section class="world" x-show="screen==='world'" x-cloak>
+    <div class="world-bar">
+      <button class="btn small" @click="closeWorld()">← Lobi</button>
+      <div class="world-modes" role="group" aria-label="Mod">
+        <button class="pill" :class="world.mode==='walk' && 'on'" @click="world.mode='walk'; world.sel=null">🚶 Gez</button>
+        <button class="pill" :class="world.mode==='build' && 'on'" @click="world.mode='build'">🔨 Kur</button>
+      </div>
+      <button class="btn small" @click="centerOn(world.mine?.plot, world.mine?.pos)">🏠 Köyüme git</button>
+      <select class="world-visit" @change="visitVillage($event.target.value); $event.target.value=''" aria-label="Bir köyü ziyaret et">
+        <option value="">👀 Köy gez…</option>
+        <template x-for="v in world.villages" :key="v.uid"><option :value="v.plot" x-text="(isOnline(v) ? '🟢 ' : '') + v.name + (v.className ? ' · ' + v.className : '')"></option></template>
+      </select>
+      <span class="world-zoom"><button class="btn small" @click="zoomBy(0.8)" aria-label="Uzaklaş">−</button><button class="btn small" @click="zoomBy(1.25)" aria-label="Yakınlaş">+</button></span>
+      <span class="coin-chip"><i>🪙</i><b x-text="coins"></b></span>
+      <button class="btn small primary" @click="collectIncome()" :disabled="!world.income" x-text="'Kazancı topla +' + world.income" :title="'Saatte ' + (world.perHour || 0) + ' coin, en fazla 12 saat birikir'"></button>
+    </div>
+    <p class="world-msg" x-show="world.msg" x-text="world.msg" @click="world.msg=''"></p>
+
+    <div class="world-shop" x-show="world.mode==='build'">
+      <div class="pills">
+        <template x-for="c in WORLD_CATS" :key="c">
+          <button class="pill" :class="world.cat===c && 'on'" @click="world.cat=c" x-text="c[0].toLocaleUpperCase('tr') + c.slice(1)"></button>
+        </template>
+      </div>
+      <div class="shop-row">
+        <template x-for="[k, it] in worldItemsIn(world.cat)" :key="k">
+          <button class="bld-pick" :class="[world.pick===k && 'on', coins < it[2] && 'poor']" @click="world.pick=k">
+            <span class="e" x-text="it[1]"></span><b x-text="it[0]"></b>
+            <small x-text="'🪙 ' + it[2] + (it[3] ? ' · +' + it[3] + '/sa' : '')"></small>
+          </button>
+        </template>
+      </div>
+      <p class="hint">Yeşil kenarlı arsa senin. Boş bir kareye tıkla, seçtiğin yapı kurulsun. Bir yapıya tıklayınca satabilirsin (fiyatının yarısı geri gelir).</p>
+    </div>
+
+    <!-- 3D dünya (world3d.js çizer); x-effect değişen her şeyi sahneye yansıtır -->
+    <div class="world-view w3d" x-effect="screen==='world' && worldSync()">
+      <div class="w3d-labels" aria-hidden="true"></div>
+      <div class="w3d-ctrl">
+        <button class="btn small" @click="rotateWorld(-1)" aria-label="Sola döndür">⟲</button>
+        <button class="btn small" @click="rotateWorld(1)" aria-label="Sağa döndür">⟳</button>
+      </div>
+    </div>
+
+    <template x-if="world.sel">
+      <div class="world-sel">
+        <span class="e" x-text="WORLD_ITEMS[world.sel.key][1]"></span>
+        <div><b x-text="WORLD_ITEMS[world.sel.key][0]"></b><small x-text="WORLD_ITEMS[world.sel.key][3] ? 'Saatte +' + WORLD_ITEMS[world.sel.key][3] + ' coin kazandırır' : 'Süs ve yaşam alanı'"></small></div>
+        <button class="btn small" @click="sellSelected()" x-text="'Sat (+' + Math.floor(WORLD_ITEMS[world.sel.key][2] / 2) + ')'"></button>
+        <button class="btn small" @click="world.sel=null">Kapat</button>
+      </div>
+    </template>
+    <p class="hint world-help">Sürükleyerek dünyayı gez, tekerlek ya da iki parmakla yakınlaş, ⟲ ⟳ ile döndür. Gez modunda kendi köyünde bir kareye tıkla ya da ok tuşlarıyla yürü. Yeşil nokta şu an oyunda olanları gösterir.</p>
   </section>
 
   <section class="panel" x-show="screen==='loading'"><div class="spinner"></div></section>

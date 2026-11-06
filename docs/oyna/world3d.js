@@ -167,9 +167,12 @@ window.World3D = (() => {
   }
 
   const tmp = new THREE.Vector3();
+  let lastW = 0, lastH = 0;
   function loop(t) {
     raf = requestAnimationFrame(loop);
     if (!el?.offsetParent) return;
+    // Ekran gizliyken başlatıldıysa ya da boyutu değiştiyse (telefon döndü) tuvali yeniden boyutlandır
+    if (el.clientWidth !== lastW || el.clientHeight !== lastH) { lastW = el.clientWidth; lastH = el.clientHeight; resize(); }
     updateCamera();
     for (const p of plots.values()) p.group.children.forEach(o => { if (o.userData.coin) { o.rotation.z = t / 600; o.position.y = 1.3 + Math.sin(t / 400) * 0.06; } });
     const w = el.clientWidth, h = el.clientHeight;

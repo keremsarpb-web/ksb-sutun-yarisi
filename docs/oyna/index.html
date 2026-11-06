@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr" data-version="1.9.3">
+<html lang="tr" data-version="1.9.4">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -16,19 +16,19 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="style.css?v=1.9.3">
-<script src="vendor/three.min.js?v=1.9.3"></script>
-<script src="game.js?v=1.9.3"></script>
-<script src="char3d.js?v=1.9.3"></script>
-<script src="matematik.js?v=1.9.3"></script>
-<script src="cloud.js?v=1.9.3"></script>
-<script src="server.js?v=1.9.3"></script>
-<script src="web.js?v=1.9.3"></script>
-<script src="world3d.js?v=1.9.3"></script>
-<script src="world.js?v=1.9.3"></script>
-<link rel="stylesheet" href="web.css?v=1.9.3">
-<link rel="stylesheet" href="world.css?v=1.9.3">
-<script defer src="vendor/alpine.min.js?v=1.9.3"></script>
+<link rel="stylesheet" href="style.css?v=1.9.4">
+<script src="vendor/three.min.js?v=1.9.4"></script>
+<script src="game.js?v=1.9.4"></script>
+<script src="char3d.js?v=1.9.4"></script>
+<script src="matematik.js?v=1.9.4"></script>
+<script src="cloud.js?v=1.9.4"></script>
+<script src="server.js?v=1.9.4"></script>
+<script src="web.js?v=1.9.4"></script>
+<link rel="stylesheet" href="web.css?v=1.9.4">
+<script src="world3d.js?v=1.9.4"></script>
+<script src="world.js?v=1.9.4"></script>
+<link rel="stylesheet" href="world.css?v=1.9.4">
+<script defer src="vendor/alpine.min.js?v=1.9.4"></script>
 </head>
 <body>
 <div class="app" x-data="game()" x-init="init()" x-cloak>
@@ -267,12 +267,6 @@
         <button class="btn primary big" @click="findMatch()">Rastgele maç bul</button>
       </div>
 
-      <div class="panel village-cta">
-        <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
-        <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
-        <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
-      </div>
-
       <div class="panel room">
         <h2>Arkadaşlarla oyna <span class="count small">online</span></h2>
         <template x-if="!room.mode">
@@ -302,6 +296,12 @@
             </div>
           </div>
         </template>
+      </div>
+
+      <div class="panel village-cta">
+        <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
+        <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
+        <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
       </div>
 
       <div class="panel prep">
@@ -848,7 +848,7 @@
     </template>
   </section>
 
-  <!-- Köyüm: herkesin aynı dünyada köy kurduğu harita (online sürüm) -->
+  <!-- Köyüm: herkesin aynı 3D dünyada köy kurduğu ortak dünya -->
   <section class="world" x-show="screen==='world'" x-cloak>
     <div class="world-bar">
       <button class="btn small" @click="closeWorld()">← Lobi</button>
@@ -906,7 +906,7 @@
 
   <section class="panel" x-show="screen==='loading'"><div class="spinner"></div></section>
 </div>
-<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.3</div>
+<div class="watermark" aria-label="made by KSB Games">made by <b>KSB Games</b> · v1.9.4</div>
 <div class="update-bar" x-data x-show="$store.update.ready" x-cloak>
   <span>Yeni güncelleme hazır: <b x-text="'v' + $store.update.version"></b></span>
   <button class="btn small" @click="location.reload()">Şimdi güncelle</button>

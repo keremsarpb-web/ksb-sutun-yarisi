@@ -1,6 +1,6 @@
 <?php
 // Yeni sürüm yayınlarken bu numarayı artır: açık uygulamalar güncellemeyi kendiliğinden alır.
-const APP_VERSION = '1.9.3';
+const APP_VERSION = '1.9.4';
 
 if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'version.php') {
     header('Content-Type: application/json; charset=utf-8');

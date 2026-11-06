@@ -8,7 +8,7 @@ WEB = ROOT / 'docs' / 'oyna'
 WEB.mkdir(parents=True, exist_ok=True)
 (WEB / 'vendor').mkdir(exist_ok=True)
 
-for f in ['game.js', 'style.css', 'char3d.js', 'icon-192.png', 'icon-512.png']:
+for f in ['game.js', 'style.css', 'char3d.js', 'world.js', 'world3d.js', 'world.css', 'icon-192.png', 'icon-512.png']:
     shutil.copy(ROOT / f, WEB / f)
 for f in ['alpine.min.js', 'three.min.js']:
     shutil.copy(ROOT / 'vendor' / f, WEB / 'vendor' / f)
@@ -29,7 +29,7 @@ rep('<title>Sütun Yarışı</title>', '<title>Sütun Yarışı – Tarayıcıda
     '<meta name="apple-mobile-web-app-status-bar-style" content="default">\n<meta name="application-name" content="Sütun Yarışı">')
 # Yerel sunucu, oyun kodundan sonra ve Alpine başlamadan yüklenir
 rep(f'<script src="char3d.js?v={version}"></script>',
-    f'<script src="char3d.js?v={version}"></script>\n<script src="matematik.js?v={version}"></script>\n<script src="cloud.js?v={version}"></script>\n<script src="server.js?v={version}"></script>\n<script src="web.js?v={version}"></script>\n<script src="world3d.js?v={version}"></script>\n<script src="world.js?v={version}"></script>\n<link rel="stylesheet" href="web.css?v={version}">\n<link rel="stylesheet" href="world.css?v={version}">')
+    f'<script src="char3d.js?v={version}"></script>\n<script src="matematik.js?v={version}"></script>\n<script src="cloud.js?v={version}"></script>\n<script src="server.js?v={version}"></script>\n<script src="web.js?v={version}"></script>\n<link rel="stylesheet" href="web.css?v={version}">')
 
 # Giriş: okul sürümündeki sekmeler aynen; hesaplar sunucuda (Firebase), her cihazdan girilir
 rep('<p class="hint">Sınıfının kayıtlı olması gerekir. Sınıf şifresini öğretmeninden öğren; sadece katılmak için sorulur.</p>',
@@ -75,17 +75,6 @@ rep("""        <button class="btn primary big" @click="findMatch()">Rastgele ma�
         </template>
       </div>
 """)
-
-# Köyüm: lobide düğme (oda panelinin üstünde) ve ortak dünya ekranı
-rep('      <div class="panel room">', """      <div class="panel village-cta">
-        <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
-        <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
-        <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
-      </div>
-
-      <div class="panel room">""")
-rep('''  <section class="panel" x-show="screen==='loading'">''',
-    (ROOT / 'araclar' / 'koy-ekrani.html').read_text(encoding='utf-8') + '''\n  <section class="panel" x-show="screen==='loading'">''')
 
 # Üst bilgi şeridi
 rep('  <p class="error" x-show="err"', """  <div class="web-bar">Tarayıcı sürümü · hesabınla her cihazdan gir · <a href="../">Okulunda kur</a> · <a href="https://keremsarpb-web.github.io/">KSB Games</a><button class="web-install" x-show="!standalone" @click="installApp()">📲 Uygulama olarak yükle</button></div>
