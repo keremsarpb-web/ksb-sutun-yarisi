@@ -635,6 +635,16 @@ window.LocalServer = (() => {
       return profile();
     },
     wheels: () => ({ wheels: Object.fromEntries(Object.entries(WHEELS).map(([k, w]) => [k, { price: w.price, slices: w.slices.map(s => [s[0], s[1]]) }])) }),
+    // Minikler: yıldız başına coin (aura bonusuyla), günde en fazla 150 coin
+    kids_finish(b) {
+      const p = P(), stars = Math.max(0, Math.min(10, Math.floor(+b.stars || 0))), t = now();
+      if (t - (p.kidsLast || 0) < 20000) return { earned: 0, message: 'Çok hızlı! Biraz bekleyip tekrar oyna.', ...profile() };
+      const used = p.kidsDay === today() ? (p.kidsCoins || 0) : 0;
+      const want = coinsFor(stars * 3, p.aura), earned = Math.max(0, Math.min(want, 150 - used));
+      p.kidsDay = today(); p.kidsCoins = used + earned; p.kidsLast = t;
+      addCoins(earned); save();
+      return { earned, message: earned < want ? 'Bugünkü Minikler coin sınırına ulaştın (150). Yarın yine kazanabilirsin!' : '', ...profile() };
+    },
     spin(b) {
       const p = P(), w = WHEELS[b.wheel];
       if (!w) fail('Böyle bir çark yok');

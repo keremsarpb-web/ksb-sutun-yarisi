@@ -581,3 +581,81 @@ button, a, .swatch, .topic, .mcard { touch-action: manipulation; -webkit-tap-hig
 .odds-table th:first-child, .odds-table td:first-child { text-align: left; }
 .account-del input { flex: 1; min-width: 140px; }
 .btn.danger { background: #ffe3e3; color: #c92a2a; border-color: #ffa8a8; }
+
+/* ---- Minikler: küçük çocuklar için resimli etkinlikler ---- */
+.kids-cta { background: linear-gradient(135deg, #fff4e6, #fff 60%); border-color: #ffc078; }
+.kids-cats { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; margin-top: 10px; }
+.kids-cat { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px; border: 3px solid #1d2340; border-radius: 18px;
+  background: #fff; font: 800 15px 'Nunito', sans-serif; color: #1d2340; cursor: pointer; box-shadow: 0 4px 0 #1d2340; transition: transform .1s; }
+.kids-cat span { font-size: 34px; line-height: 1; }
+.kids-cat:hover { transform: translateY(-2px); }
+.kids-cat:active { transform: translateY(3px); box-shadow: 0 1px 0 #1d2340; }
+.kc-matematik { background: #e7f5ff; } .kc-turkce { background: #fff0f6; } .kc-hayat { background: #ebfbee; }
+.kc-ingilizce { background: #f3f0ff; } .kc-dikkat { background: #fff9db; } .kc-karisik { background: #e6fcf5; } .kc-hafiza { background: #ffe8cc; }
+
+.kids { max-width: 760px; margin: 0 auto; padding: 0 12px 24px; }
+.kids-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 12px; font: 800 20px 'Baloo 2', sans-serif; }
+.kids-card { text-align: center; background: linear-gradient(180deg, #fffdf5, #fff); }
+.kids-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+.kids-progress i { width: 22px; height: 10px; border-radius: 6px; background: #e9ecef; border: 2px solid #1d2340; }
+.kids-progress i.past { background: #ffd43b; } .kids-progress i.now { background: #4dabf7; }
+.kids-say { display: inline-flex; align-items: center; gap: 10px; border: 3px solid #1d2340; border-radius: 999px; background: #fff;
+  padding: 10px 20px; font: 800 22px 'Baloo 2', sans-serif; color: #1d2340; cursor: pointer; box-shadow: 0 3px 0 #1d2340; max-width: 100%; }
+.kids-say span { font-size: 26px; }
+.kids-visual { margin: 18px auto 6px; min-height: 60px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.kids-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 18px; }
+.kids-opts.wide { grid-template-columns: 1fr 1fr; }
+.kids-opt { min-height: 110px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px;
+  border: 4px solid #1d2340; border-radius: 22px; background: #fff; cursor: pointer; box-shadow: 0 5px 0 #1d2340; color: #1d2340;
+  font-family: 'Nunito', sans-serif; transition: transform .12s, background .2s; }
+.kids-opt:active { transform: translateY(4px); box-shadow: 0 1px 0 #1d2340; }
+.kids-opt small { font: 800 16px 'Nunito', sans-serif; }
+.kids-opt.ok { background: #b2f2bb; border-color: #2b8a3e; animation: kidsPop .5s; }
+.kids-opt.bad { background: #ffc9c9; border-color: #c92a2a; animation: kidsShake .4s; }
+.kids-opt.dim { opacity: .4; }
+@keyframes kidsPop { 40% { transform: scale(1.08); } }
+@keyframes kidsShake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.kids-stars { margin-top: 14px; font: 800 20px 'Baloo 2', sans-serif; }
+
+.k-big { font-size: 52px; line-height: 1.1; }
+.k-big.huge, .huge.k-big { font-size: 96px; }
+.k-num { font: 800 46px 'Baloo 2', sans-serif; }
+.k-num.huge { font-size: 96px; color: #1c7ed6; }
+.k-letter { font: 800 52px 'Baloo 2', sans-serif; color: #d6336c; }
+.k-word { font: 800 30px 'Baloo 2', sans-serif; letter-spacing: 3px; }
+.k-word.big { font-size: 46px; color: #7048e8; }
+.k-wordbtn { font: 800 26px 'Baloo 2', sans-serif; }
+.k-q { display: inline-block; color: #f76707; font: 800 46px 'Baloo 2', sans-serif; animation: kidsBlink 1s infinite alternate; }
+@keyframes kidsBlink { to { opacity: .35; } }
+.k-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: 44px; line-height: 1.15; max-width: 520px; }
+.k-row.k-count { font-size: 46px; }
+.k-row.small { font-size: 26px; gap: 2px; max-width: 150px; }
+.k-row span.gone { opacity: .3; position: relative; }
+.k-row span.gone::after { content: '✖'; position: absolute; inset: 0; color: #e03131; font-size: .9em; display: grid; place-items: center; }
+.k-math { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; font: 800 40px 'Baloo 2', sans-serif; }
+.k-math .k-row { font-size: 36px; max-width: 200px; }
+.k-shape { width: 84px; height: 84px; }
+.k-swatch { width: 80px; height: 80px; border-radius: 50%; border: 4px solid #1d2340; display: block; }
+.k-dots { font-size: 28px; color: #e8590c; letter-spacing: 2px; max-width: 120px; word-break: break-all; line-height: 1.1; }
+
+.mem-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px auto 0; max-width: 460px; }
+.mem-card { aspect-ratio: 1; border: 4px solid #1d2340; border-radius: 16px; background: #74c0fc; font-size: 40px; cursor: pointer;
+  box-shadow: 0 4px 0 #1d2340; transition: transform .25s, background .25s; }
+.mem-card.open { background: #fff; transform: rotateY(180deg); }
+.mem-card.open span { display: inline-block; transform: rotateY(180deg); }
+.mem-card.done { background: #b2f2bb; }
+
+.kids-end .kids-trophy { font-size: 90px; animation: kidsPop 1s; }
+.kids-end h2 { font-size: 34px; margin: 4px 0; }
+.kids-starline { font-size: 26px; letter-spacing: 2px; margin: 8px 0 12px; word-break: break-all; }
+.kids-end .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+
+@media (max-width: 600px) {
+  .kids-say { font-size: 18px; padding: 8px 14px; }
+  .kids-opt { min-height: 92px; }
+  .k-big { font-size: 42px; } .k-big.huge { font-size: 76px; }
+  .k-row, .k-row.k-count { font-size: 34px; }
+  .k-math { font-size: 30px; } .k-math .k-row { font-size: 26px; max-width: 120px; }
+  .k-word.big { font-size: 36px; }
+  .mem-card { font-size: 32px; }
+}

@@ -66,6 +66,7 @@ const AURA_RARITY = ['leaf' => 'common', 'bubble' => 'common', 'ice' => 'rare', 
     'rainbow' => 'legendary', 'gold' => 'legendary', 'void' => 'mythic'];
 const AURA_BONUS = ['common' => 10, 'rare' => 20, 'epic' => 35, 'legendary' => 50, 'mythic' => 100, 'divine' => 150, 'eternal' => 200];
 
+const KIDS_DAILY = 150;
 function coin_bonus(string $aura): int { return AURA_BONUS[AURA_RARITY[$aura] ?? ''] ?? 0; }
 function coins_for(int $base, string $aura): int { return (int) round($base * (100 + coin_bonus($aura)) / 100); }
 function add_coins(int $pid, int $n): void { if ($n > 0) q('UPDATE players SET coins = coins + ? WHERE id = ?', [$n, $pid]); }
@@ -101,6 +102,9 @@ function migrate(): void
     }
     if (!q("SHOW COLUMNS FROM exams LIKE 'items'")->fetch()) {
         q("ALTER TABLE exams ADD COLUMN items MEDIUMTEXT NULL, ADD COLUMN coins INT NOT NULL DEFAULT 0, MODIFY subject VARCHAR(40) NOT NULL");
+    }
+    if (!q("SHOW COLUMNS FROM players LIKE 'kids_day'")->fetch()) {
+        q("ALTER TABLE players ADD COLUMN kids_day DATE NULL, ADD COLUMN kids_coins INT NOT NULL DEFAULT 0, ADD COLUMN kids_last BIGINT NOT NULL DEFAULT 0");
     }
 }
 
@@ -632,6 +636,21 @@ try {
             if ($s[0] === 'coins') add_coins((int) $p['id'], $s[1]);
             else q('INSERT INTO inventory (player_id, item_type, item_key) VALUES (?, ?, ?)', [$p['id'], 'box', $s[1] === 'classic' ? '' : $s[1]]);
             out(['slice' => $idx, 'prize' => [$s[0], $s[1]]] + profile(current_player($in)));
+
+        case 'kids_finish':
+            // Minikler: yıldız başına coin (aura bonusuyla), günde en fazla KIDS_DAILY coin
+            $p = current_player($in);
+            $stars = max(0, min(10, (int) ($in['stars'] ?? 0)));
+            $now = now_ms();
+            if ($now - (int) $p['kids_last'] < 20000) out(['earned' => 0, 'message' => 'Çok hızlı! Biraz bekleyip tekrar oyna.'] + profile($p));
+            $today = date('Y-m-d');
+            $used = ($p['kids_day'] ?? null) === $today ? (int) $p['kids_coins'] : 0;
+            $want = (int) round($stars * 3 * (100 + coin_bonus((string) $p['aura'])) / 100);
+            $earned = max(0, min($want, KIDS_DAILY - $used));
+            q('UPDATE players SET kids_day = ?, kids_coins = ?, kids_last = ? WHERE id = ?', [$today, $used + $earned, $now, $p['id']]);
+            add_coins((int) $p['id'], $earned);
+            $msg = $earned < $want ? 'Bugünkü Minikler coin sınırına ulaştın (' . KIDS_DAILY . '). Yarın yine kazanabilirsin!' : '';
+            out(['earned' => $earned, 'message' => $msg] + profile(current_player($in)));
 
         case 'queue_join':
             $p = current_player($in);

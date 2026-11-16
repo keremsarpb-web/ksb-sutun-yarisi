@@ -23,6 +23,7 @@ $v = '?v=' . APP_VERSION;
 <script src="char3d.js<?= $v ?>"></script>
 <script src="world3d.js<?= $v ?>"></script>
 <script src="world.js<?= $v ?>"></script>
+<script src="minikler.js<?= $v ?>"></script>
 <link rel="stylesheet" href="world.css<?= $v ?>">
 <script defer src="vendor/alpine.min.js<?= $v ?>"></script>
 </head>
@@ -264,6 +265,16 @@ $v = '?v=' . APP_VERSION;
         <h2>🏘️ Köyüm <span class="count small">yeni</span></h2>
         <p>Coinlerinle kendi köyünü kur: evler, dükkanlar, fırınlar, fabrikalar… Herkes aynı dünyada; diğer oyuncuların köylerini gez, karakterinle köyünde dolaş.</p>
         <button class="btn primary big" @click="openWorld()" :disabled="world.loading" x-text="world.loading ? 'Açılıyor…' : 'Köyüme git'"></button>
+      </div>
+
+      <div class="panel kids-cta">
+        <h2>🧸 Minikler <span class="count small">yeni</span></h2>
+        <p>Küçük kardeşler için resimli, sesli etkinlikler: say, eşleştir, bul, hatırla! Sorular sesli okunur, her seferinde farklı gelir. Her yıldız coin getirir.</p>
+        <div class="kids-cats">
+          <template x-for="c in KIDS_CATS" :key="c[0]">
+            <button class="kids-cat" :class="'kc-'+c[0]" @click="openKids(c[0])"><span x-text="c[1]"></span><b x-text="c[2]"></b></button>
+          </template>
+        </div>
       </div>
 
       <div class="panel prep">
@@ -716,7 +727,7 @@ $v = '?v=' . APP_VERSION;
     <div class="panel">
       <div class="topics-head">
         <h2>Ders ve konu seç</h2>
-        <button class="btn" @click="screen='lobby'">Lobiye dön</button>
+        <button class="btn" @click="kidsBack()">Lobiye dön</button>
       </div>
       <p class="hint">İstediğin kadar konu seç. Her sınavda bu konulardan 10 farklı etkinlik gelir; son sınavlarında çıkan sorular tekrar gelmez. Matematik soruları her seferinde yeni sayılarla üretilir.</p>
       <label>Etkinlik türleri</label>
@@ -839,6 +850,55 @@ $v = '?v=' . APP_VERSION;
           <button class="btn primary" @click="startExam(exam.req)">Yeni sorularla tekrar</button>
           <button class="btn" @click="openTopics()">Konu değiştir</button>
           <button class="btn" @click="leaveExam()">Lobiye dön</button>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- Minikler: küçük çocuklar için resimli etkinlikler -->
+  <section class="kids" x-show="screen==='kids'" x-cloak>
+    <div class="kids-bar">
+      <button class="btn small" @click="kidsBack()">← Lobi</button>
+      <b x-text="(KIDS_CATS.find(c=>c[0]===kids.cat)||[])[1] + ' ' + ((KIDS_CATS.find(c=>c[0]===kids.cat)||[])[2]||'')"></b>
+      <button class="btn small" @click="kids.sound=!kids.sound; kids.sound ? kidsSay() : kidsMute()" x-text="kids.sound ? '🔊' : '🔇'" aria-label="Ses"></button>
+    </div>
+
+    <template x-if="!kids.done && !kids.mem && kidsQ()">
+      <div class="panel kids-card">
+        <div class="kids-progress"><template x-for="n in kids.list.length" :key="n"><i :class="n-1 < kids.i ? 'past' : (n-1===kids.i ? 'now' : '')"></i></template></div>
+        <button class="kids-say" @click="kidsSay()"><span>🔊</span> <b x-text="kidsQ().say"></b></button>
+        <div class="kids-visual" x-show="kidsQ().visual" x-html="kidsQ().visual"></div>
+        <div class="kids-opts" :class="kidsQ().wide && 'wide'">
+          <template x-for="(o, j) in kidsQ().options" :key="kids.i + '-' + j">
+            <button class="kids-opt" :class="kidsOptClass(j)" @click="kidsPick(j)" x-html="o.html" :aria-label="o.label"></button>
+          </template>
+        </div>
+        <div class="kids-stars" x-text="'⭐ ' + kids.stars"></div>
+      </div>
+    </template>
+
+    <template x-if="!kids.done && kids.mem">
+      <div class="panel kids-card">
+        <button class="kids-say" @click="kids.sound && kidsSay()"><span>🃏</span> <b>Aynı resimleri bul!</b></button>
+        <div class="mem-grid">
+          <template x-for="c in kids.mem.cards" :key="c.id">
+            <button class="mem-card" :class="{open: c.open || c.done, done: c.done}" @click="memFlip(c)"><span x-text="(c.open || c.done) ? c.e : '❓'"></span></button>
+          </template>
+        </div>
+        <div class="kids-stars" x-text="'Hamle: ' + kids.mem.moves + ' · Bulunan: ' + kids.mem.pairs + '/6'"></div>
+      </div>
+    </template>
+
+    <template x-if="kids.done">
+      <div class="panel kids-card kids-end">
+        <div class="kids-trophy" x-text="kids.stars >= 8 ? '🏆' : kids.stars >= 5 ? '🎉' : '👍'"></div>
+        <h2 x-text="kids.stars >= 8 ? 'Muhteşem!' : kids.stars >= 5 ? 'Çok iyi!' : 'Güzel deneme!'"></h2>
+        <div class="kids-starline" x-text="kidsStarsText(kids.stars)"></div>
+        <p x-show="kids.result && kids.result.earned > 0"><b x-text="'+' + kids.result.earned + ' 🪙 coin kazandın!'"></b></p>
+        <p class="hint" x-show="kids.result && kids.result.message" x-text="kids.result?.message"></p>
+        <div class="row">
+          <button class="btn primary big" @click="openKids(kids.cat)">🔁 Yeniden oyna</button>
+          <button class="btn" @click="kidsBack()">Lobiye dön</button>
         </div>
       </div>
     </template>
