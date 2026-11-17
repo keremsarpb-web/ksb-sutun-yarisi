@@ -659,3 +659,60 @@ button, a, .swatch, .topic, .mcard { touch-action: manipulation; -webkit-tap-hig
   .k-word.big { font-size: 36px; }
   .mem-card { font-size: 32px; }
 }
+
+/* ---- Gelişim takibi ---- */
+.progress-cta { background: linear-gradient(135deg, #e7f5ff, #fff 60%); border-color: #74c0fc; }
+.progress { max-width: 820px; margin: 0 auto; padding: 0 12px 24px; }
+.pg { display: grid; gap: 14px; }
+.pg h3 { margin: 0 0 8px; font: 800 22px 'Baloo 2', sans-serif; }
+.pg h4 { margin: 14px 0 6px; font: 800 16px 'Nunito', sans-serif; }
+.pg-head h2 { margin: 0 0 12px; }
+.pg-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.pg-tile { border: 3px solid #1d2340; border-radius: 16px; padding: 10px; text-align: center; background: #fff; box-shadow: 0 3px 0 #1d2340; }
+.pg-tile b { display: block; font: 800 28px 'Baloo 2', sans-serif; color: #1d2340; line-height: 1.1; }
+.pg-tile span { font: 700 13px 'Nunito', sans-serif; color: #5c6080; }
+.pg-legend { display: flex; gap: 16px; flex-wrap: wrap; font: 700 13px 'Nunito', sans-serif; color: #5c6080; margin-bottom: 8px; }
+.pg-legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.sw.pk, .pg-stack i.pk { background: #e8590c; }
+.sw.pe, .pg-stack i.pe { background: #1c7ed6; }
+.pg-chart { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; height: 170px; align-items: end; border-bottom: 1px solid #d5d8e6; padding-top: 26px; }
+.pg-col { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; cursor: pointer; }
+.pg-col small { position: absolute; bottom: -20px; font: 700 11px 'Nunito', sans-serif; color: #5c6080; }
+.pg-col.on small { color: #1d2340; }
+.pg-stack { width: 70%; max-width: 26px; height: 100%; display: flex; flex-direction: column-reverse; gap: 2px; }
+.pg-stack i { display: block; width: 100%; min-height: 3px; }
+.pg-stack i:last-child { border-radius: 4px 4px 0 0; }
+.pg-col.on .pg-stack { filter: brightness(1.1); }
+.pg-tip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #1d2340; color: #fff;
+  font: 700 12px 'Nunito', sans-serif; padding: 4px 8px; border-radius: 8px; z-index: 2; pointer-events: none; }
+.pg-col:first-child .pg-tip { left: 0; transform: none; } .pg-col:last-child .pg-tip { left: auto; right: 0; transform: none; }
+.pg-chart + * { margin-top: 26px; }
+.pg-bars { display: grid; gap: 10px; margin-top: 8px; }
+.pg-bar { display: grid; grid-template-columns: 130px 1fr 110px; gap: 10px; align-items: center; }
+.pg-name { font: 800 15px 'Nunito', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pg-track { height: 14px; background: #edf0f7; border-radius: 7px; overflow: hidden; }
+.pg-track i { display: block; height: 100%; border-radius: 7px; }
+.pg-val { font: 700 13px 'Nunito', sans-serif; color: #5c6080; }
+.pg-val b { font-size: 16px; color: #1d2340; }
+i.lv4 { background: #2f9e44; } i.lv3 { background: #74b816; } i.lv2 { background: #f59f00; } i.lv1 { background: #e03131; }
+b.lv4 { color: #2b8a3e; } b.lv3 { color: #5c940d; } b.lv2 { color: #e67700; } b.lv1 { color: #c92a2a; }
+.pg-advice { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px;
+  background: #fff4e6; border-radius: 12px; font: 700 14px 'Nunito', sans-serif; }
+.pg-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.pg-topic { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 12px; margin-bottom: 6px; }
+.pg-topic span { display: flex; flex-direction: column; min-width: 0; }
+.pg-topic small { color: #5c6080; font-weight: 700; }
+.pg-topic.good { background: #ebfbee; } .pg-topic.good > b { color: #2b8a3e; }
+.pg-topic.weak { background: #fff5f5; }
+.pg-recent { display: grid; gap: 4px; }
+.pg-recent div { display: grid; grid-template-columns: 1fr auto 56px; gap: 10px; align-items: center; padding: 6px 4px; border-bottom: 1px solid #edf0f7; font: 700 14px 'Nunito', sans-serif; }
+.pg-recent small { color: #5c6080; }
+.pg-recent b { text-align: right; }
+.pg-key { text-align: center; }
+@media (max-width: 600px) {
+  .pg-bar { grid-template-columns: 96px 1fr 70px; gap: 6px; }
+  .pg-val small { display: none; }
+  .pg-two { grid-template-columns: 1fr; }
+  .pg-chart { gap: 2px; height: 140px; }
+  .pg-col small { font-size: 9px; }
+}

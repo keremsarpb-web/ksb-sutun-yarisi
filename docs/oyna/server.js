@@ -642,8 +642,45 @@ window.LocalServer = (() => {
       const used = p.kidsDay === today() ? (p.kidsCoins || 0) : 0;
       const want = coinsFor(stars * 3, p.aura), earned = Math.max(0, Math.min(want, 150 - used));
       p.kidsDay = today(); p.kidsCoins = used + earned; p.kidsLast = t;
+      // Gelişim takibi için alan alan sonuç
+      const AREAS = ['matematik', 'turkce', 'hayat', 'ingilizce', 'dikkat', 'hafiza'], areas = {};
+      for (const [k, v] of Object.entries(b.areas || {})) {
+        if (!AREAS.includes(k) || !Array.isArray(v) || v.length !== 2) continue;
+        const tot = Math.max(0, Math.min(10, Math.floor(+v[1] || 0))); areas[k] = [Math.max(0, Math.min(tot, Math.floor(+v[0] || 0))), tot];
+      }
+      S.kidsLog = (S.kidsLog || []).concat([{ day: today(), cat: [...AREAS, 'karisik'].includes(b.cat) ? b.cat : 'karisik', stars, areas }]).slice(-500);
       addCoins(earned); save();
       return { earned, message: earned < want ? 'Bugünkü Minikler coin sınırına ulaştın (150). Yarın yine kazanabilirsin!' : '', ...profile() };
+    },
+    // Gelişim takibi: Minikler, Sınava Hazırlık ve maç sonuçlarının özeti
+    progress(b) {
+      const p = P();
+      if (b.player_id) fail('Bu işlem yalnızca okul sürümünde öğretmen içindir');
+      const days = {}, kids = { sets: 0, stars: 0, areas: {} };
+      for (const r of S.kidsLog || []) {
+        kids.sets++; kids.stars += r.stars;
+        (days[r.day] ||= {}).kids = (days[r.day].kids || 0) + r.stars;
+        for (const [k, v] of Object.entries(r.areas || {})) { const a = (kids.areas[k] ||= [0, 0]); a[0] += v[0]; a[1] += v[1]; }
+      }
+      const subjects = {}, topics = {}, recent = [];
+      for (const e of S.exams.filter(e => e.finished)) {
+        recent.push({ day: e.day, label: e.label, score: e.score, total: e.items.length });
+        (days[e.day] ||= {}).exam = (days[e.day].exam || 0) + e.score;
+        e.items.forEach((it, i) => {
+          const ok = i in e.answers && itemCorrect(it, e.answers[i]) ? 1 : 0;
+          const sv = (subjects[it.subject] ||= [0, 0]); sv[0] += ok; sv[1]++;
+          const tv = (topics[it.subject + '|' + it.topic] ||= [0, 0]); tv[0] += ok; tv[1]++;
+        });
+      }
+      return {
+        name: p.name, days, kids,
+        exams: {
+          subjects: Object.entries(subjects).map(([subject, v]) => ({ subject, correct: v[0], total: v[1] })),
+          topics: Object.entries(topics).map(([k, v]) => ({ subject: k.split('|')[0], topic: k.split('|').slice(1).join('|'), correct: v[0], total: v[1] })),
+          recent: recent.slice(-10),
+        },
+        match: { games: p.games || 0, wins: p.wins || 0 },
+      };
     },
     spin(b) {
       const p = P(), w = WHEELS[b.wheel];

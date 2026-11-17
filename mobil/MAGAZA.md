@@ -3,7 +3,7 @@
 Bu klasör, oyunun telefon uygulamasıdır (Capacitor 7, iOS + Android). Oyunun bütün dosyaları uygulamanın içindedir; internet yalnızca hesap/kayıt (Firebase) ve online odalar için kullanılır.
 
 - Uygulama kimliği (Bundle ID / Package): `com.ksbgames.sutunyarisi`
-- Sürüm: 1.9.5
+- Sürüm: 1.9.6
 - Gizlilik politikası: https://keremsarpb-web.github.io/ksb-sutun-yarisi/gizlilik.html
 - Destek: https://keremsarpb-web.github.io/ksb-sutun-yarisi/destek.html
 
@@ -52,6 +52,7 @@ Mac'in varsa: `cd mobil && npm ci && npm run sync && npx cap open ios`, Xcode'da
   • Arkadaşlarla oyna: oda kur, kodu paylaş, arkadaşlarınla aynı maçta yarış.
   • Sınava Hazırlık: Matematik, Fen Bilimleri, Türkçe, Sosyal Bilgiler ve İngilizceden 37 konu; test, doğru-yanlış ve eşleştirme etkinlikleri. Her seferinde farklı sorular, her sorudan sonra açıklama.
   • Minikler: küçük kardeşler için resimli ve sesli etkinlikler (sayma, harfler, hayvanlar, renkler, hafıza oyunu).
+  • Gelişimim: hangi derste ne kadar iyisin, hangi konuyu çalışmalısın; son 14 günün grafiği.
   • Köyüm: oynayarak kazandığın coinlerle kendi köyünü kur; evler, dükkanlar, fırınlar, okullar… Herkes aynı 3D dünyada, diğer köyleri gez.
   • Low poly 3D karakterler, şapkalar, auralar ve emote'lar.
 

@@ -8,7 +8,7 @@ WEB = ROOT / 'docs' / 'oyna'
 WEB.mkdir(parents=True, exist_ok=True)
 (WEB / 'vendor').mkdir(exist_ok=True)
 
-for f in ['game.js', 'style.css', 'char3d.js', 'world.js', 'world3d.js', 'world.css', 'minikler.js', 'icon-192.png', 'icon-512.png']:
+for f in ['game.js', 'style.css', 'char3d.js', 'world.js', 'world3d.js', 'world.css', 'minikler.js', 'gelisim.js', 'icon-192.png', 'icon-512.png']:
     shutil.copy(ROOT / f, WEB / f)
 for f in ['alpine.min.js', 'three.min.js']:
     shutil.copy(ROOT / 'vendor' / f, WEB / 'vendor' / f)

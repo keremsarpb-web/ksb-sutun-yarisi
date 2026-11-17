@@ -162,7 +162,7 @@
     const cats = cat === 'karisik' ? Object.keys(GEN) : [cat];
     const seen = new Set(), list = [];
     for (let tries = 0; list.length < SET && tries < 200; tries++) {
-      const q = pick(GEN[pick(cats)])();
+      const area = pick(cats); const q = pick(GEN[area])(); q.area = area;
       const key = q.say + q.visual + q.options.map(o => o.label).join();
       if (seen.has(key)) continue;
       seen.add(key); list.push(q);
@@ -188,11 +188,11 @@
     const g = base();
     Object.assign(g, {
       KIDS_CATS: CATS,
-      kids: { cat: '', list: [], i: 0, picked: null, stars: 0, done: false, result: null, sound: true, mem: null },
+      kids: { cat: '', list: [], i: 0, picked: null, stars: 0, done: false, result: null, sound: true, mem: null, res: {} },
 
       openKids(cat) {
         const k = this.kids;
-        k.cat = cat; k.i = 0; k.picked = null; k.stars = 0; k.done = false; k.result = null; k.mem = null;
+        k.cat = cat; k.res = {}; k.i = 0; k.picked = null; k.stars = 0; k.done = false; k.result = null; k.mem = null;
         if (cat === 'hafiza') this.memStart();
         else k.list = makeSet(cat);
         this.screen = 'kids';
@@ -210,6 +210,7 @@
         k.picked = j;
         const ok = j === q.correct;
         if (ok) k.stars++;
+        const a = (k.res[q.area] ||= [0, 0]); a[1]++; if (ok) a[0]++;
         if (k.sound) say(ok ? pick(['Aferin!', 'Harika!', 'Süpersin!', 'Doğru!']) : 'Tekrar dene, bir dahakine!');
         setTimeout(() => this.kidsNext(), ok ? 1100 : 1700);
       },
@@ -222,7 +223,7 @@
         const k = this.kids;
         k.done = true;
         try {
-          const r = await this.api('kids_finish', { stars: Math.min(SET, stars) });
+          const r = await this.api('kids_finish', { stars: Math.min(SET, stars), cat: k.cat, areas: k.mem ? { hafiza: [Math.min(SET, stars), SET] } : k.res });
           k.result = r;
           this.applyProfile(r);
         } catch (e) { k.result = { earned: 0, message: e.message }; }

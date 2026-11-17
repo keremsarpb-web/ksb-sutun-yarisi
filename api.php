@@ -67,6 +67,7 @@ const AURA_RARITY = ['leaf' => 'common', 'bubble' => 'common', 'ice' => 'rare', 
 const AURA_BONUS = ['common' => 10, 'rare' => 20, 'epic' => 35, 'legendary' => 50, 'mythic' => 100, 'divine' => 150, 'eternal' => 200];
 
 const KIDS_DAILY = 150;
+const KIDS_AREAS = ['matematik', 'turkce', 'hayat', 'ingilizce', 'dikkat', 'hafiza'];
 function coin_bonus(string $aura): int { return AURA_BONUS[AURA_RARITY[$aura] ?? ''] ?? 0; }
 function coins_for(int $base, string $aura): int { return (int) round($base * (100 + coin_bonus($aura)) / 100); }
 function add_coins(int $pid, int $n): void { if ($n > 0) q('UPDATE players SET coins = coins + ? WHERE id = ?', [$n, $pid]); }
@@ -106,6 +107,15 @@ function migrate(): void
     if (!q("SHOW COLUMNS FROM players LIKE 'kids_day'")->fetch()) {
         q("ALTER TABLE players ADD COLUMN kids_day DATE NULL, ADD COLUMN kids_coins INT NOT NULL DEFAULT 0, ADD COLUMN kids_last BIGINT NOT NULL DEFAULT 0");
     }
+    q("CREATE TABLE IF NOT EXISTS kids_results (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        player_id INT NOT NULL,
+        cat VARCHAR(16) NOT NULL,
+        stars TINYINT NOT NULL,
+        areas VARCHAR(400) NOT NULL DEFAULT '{}',
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX (player_id, created_at)
+    ) ENGINE=InnoDB");
 }
 
 function now_ms(): int { return (int) floor(microtime(true) * 1000); }
@@ -648,9 +658,61 @@ try {
             $want = (int) round($stars * 3 * (100 + coin_bonus((string) $p['aura'])) / 100);
             $earned = max(0, min($want, KIDS_DAILY - $used));
             q('UPDATE players SET kids_day = ?, kids_coins = ?, kids_last = ? WHERE id = ?', [$today, $used + $earned, $now, $p['id']]);
+            // Gelişim takibi için alan alan sonuç
+            $areas = [];
+            foreach ((array) ($in['areas'] ?? []) as $k => $v) {
+                if (!in_array($k, KIDS_AREAS, true) || !is_array($v) || count($v) !== 2) continue;
+                $t = max(0, min(10, (int) $v[1])); $areas[$k] = [max(0, min($t, (int) $v[0])), $t];
+            }
+            $cat = in_array($in['cat'] ?? '', array_merge(KIDS_AREAS, ['karisik']), true) ? $in['cat'] : 'karisik';
+            q('INSERT INTO kids_results (player_id, cat, stars, areas) VALUES (?, ?, ?, ?)', [$p['id'], $cat, $stars, json_encode($areas)]);
             add_coins((int) $p['id'], $earned);
             $msg = $earned < $want ? 'Bugünkü Minikler coin sınırına ulaştın (' . KIDS_DAILY . '). Yarın yine kazanabilirsin!' : '';
             out(['earned' => $earned, 'message' => $msg] + profile(current_player($in)));
+
+        case 'progress':
+            // Gelişim takibi: Minikler, Sınava Hazırlık ve maç sonuçlarının özeti
+            $p = current_player($in);
+            if (!empty($in['player_id'])) {
+                // Öğretmen, bir sınıfın ya da öğrencinin gelişimine bakabilir
+                if ($p['role'] !== 'teacher') fail('Bu işlem yalnızca öğretmen içindir', 403);
+                $p = class_by_id($in['player_id']);
+            }
+            $pid = (int) $p['id'];
+            $days = [];
+            $kids = ['sets' => 0, 'stars' => 0, 'areas' => []];
+            foreach (q('SELECT stars, areas, DATE(created_at) AS d FROM kids_results WHERE player_id = ? ORDER BY id DESC LIMIT 500', [$pid])->fetchAll() as $r) {
+                $kids['sets']++; $kids['stars'] += (int) $r['stars'];
+                $days[$r['d']]['kids'] = ($days[$r['d']]['kids'] ?? 0) + (int) $r['stars'];
+                foreach (json_decode($r['areas'], true) ?: [] as $k => $v) {
+                    $kids['areas'][$k][0] = ($kids['areas'][$k][0] ?? 0) + (int) $v[0];
+                    $kids['areas'][$k][1] = ($kids['areas'][$k][1] ?? 0) + (int) $v[1];
+                }
+            }
+            $subjects = []; $topics = []; $recent = [];
+            foreach (q('SELECT subject, items, answers, score, DATE(created_at) AS d FROM exams WHERE player_id = ? AND finished = 1 AND items IS NOT NULL ORDER BY id DESC LIMIT 100', [$pid])->fetchAll() as $e) {
+                $items = json_decode($e['items'], true) ?: [];
+                $answers = json_decode((string) $e['answers'], true) ?: [];
+                if (count($recent) < 10) $recent[] = ['day' => $e['d'], 'label' => $e['subject'], 'score' => (int) $e['score'], 'total' => count($items)];
+                $days[$e['d']]['exam'] = ($days[$e['d']]['exam'] ?? 0) + (int) $e['score'];
+                foreach ($items as $i => $it) {
+                    $ok = isset($answers[$i]) && item_correct($it, $answers[$i]) ? 1 : 0;
+                    $sk = $it['subject']; $tk = $it['subject'] . '|' . $it['topic'];
+                    $subjects[$sk] = [($subjects[$sk][0] ?? 0) + $ok, ($subjects[$sk][1] ?? 0) + 1];
+                    $topics[$tk] = [($topics[$tk][0] ?? 0) + $ok, ($topics[$tk][1] ?? 0) + 1];
+                }
+            }
+            out([
+                'name' => $p['role'] === 'student' ? $p['name'] : ($p['display_name'] ?: $p['name']),
+                'days' => $days,
+                'kids' => $kids,
+                'exams' => [
+                    'subjects' => array_map(fn($k, $v) => ['subject' => $k, 'correct' => $v[0], 'total' => $v[1]], array_keys($subjects), $subjects),
+                    'topics' => array_map(fn($k, $v) => ['subject' => explode('|', $k)[0], 'topic' => explode('|', $k, 2)[1], 'correct' => $v[0], 'total' => $v[1]], array_keys($topics), $topics),
+                    'recent' => array_reverse($recent),
+                ],
+                'match' => ['games' => (int) $p['games'], 'wins' => (int) $p['wins']],
+            ]);
 
         case 'queue_join':
             $p = current_player($in);

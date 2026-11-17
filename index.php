@@ -24,6 +24,7 @@ $v = '?v=' . APP_VERSION;
 <script src="world3d.js<?= $v ?>"></script>
 <script src="world.js<?= $v ?>"></script>
 <script src="minikler.js<?= $v ?>"></script>
+<script src="gelisim.js<?= $v ?>"></script>
 <link rel="stylesheet" href="world.css<?= $v ?>">
 <script defer src="vendor/alpine.min.js<?= $v ?>"></script>
 </head>
@@ -275,6 +276,12 @@ $v = '?v=' . APP_VERSION;
             <button class="kids-cat" :class="'kc-'+c[0]" @click="openKids(c[0])"><span x-text="c[1]"></span><b x-text="c[2]"></b></button>
           </template>
         </div>
+      </div>
+
+      <div class="panel progress-cta">
+        <h2>📈 Gelişimim <span class="count small">yeni</span></h2>
+        <p>Hangi derste ne kadar iyisin, hangi konuyu çalışmalısın, son iki haftada ne kadar oynadın? Hepsi tek ekranda.</p>
+        <button class="btn primary big" @click="openProgress()">📈 Gelişimimi gör</button>
       </div>
 
       <div class="panel prep">
@@ -585,6 +592,7 @@ $v = '?v=' . APP_VERSION;
                   <template x-if="teacher.resetFor !== c.id && teacher.deleteFor !== c.id">
                     <div>
                       <button class="btn small" @click="tGiveBox(c)">+1 Kutu ver</button>
+                      <button class="btn small" @click="openProgress(c.id)">📈 Gelişim</button>
                       <button class="btn small" @click="teacher.resetFor = c.id; teacher.newPass = ''">Şifre sıfırla</button>
                       <button class="btn small danger" @click="teacher.deleteFor = c.id">Sil</button>
                     </div>
@@ -639,6 +647,7 @@ $v = '?v=' . APP_VERSION;
                   <template x-if="teacher.resetFor !== c.id && teacher.deleteFor !== c.id">
                     <div>
                       <button class="btn small" @click="tGiveBox(c)">+1 Kutu</button>
+                      <button class="btn small" @click="openProgress(c.id)">📈 Gelişim</button>
                       <button class="btn small" @click="teacher.resetFor = c.id; teacher.newPass = ''">Şifre sıfırla</button>
                       <button class="btn small danger" @click="teacher.deleteFor = c.id">Sil</button>
                     </div>
@@ -851,6 +860,108 @@ $v = '?v=' . APP_VERSION;
           <button class="btn" @click="openTopics()">Konu değiştir</button>
           <button class="btn" @click="leaveExam()">Lobiye dön</button>
         </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- Gelişim takibi -->
+  <section class="progress" x-show="screen==='progress'" x-cloak>
+    <div class="kids-bar">
+      <button class="btn small" @click="progressBack()" x-text="prog.back==='teacher' ? '← Öğretmen paneli' : '← Lobi'"></button>
+      <b>📈 Gelişim</b>
+      <button class="btn small" @click="openProgress(prog.forId)" aria-label="Yenile">🔄</button>
+    </div>
+    <div class="panel" x-show="prog.loading"><div class="spinner"></div></div>
+    <div class="panel" x-show="prog.err"><p class="err" x-text="prog.err"></p></div>
+
+    <template x-if="prog.data">
+      <div class="pg">
+        <div class="panel pg-head">
+          <h2 x-text="prog.data.name + ' · Gelişim raporu'"></h2>
+          <div class="pg-tiles">
+            <div class="pg-tile"><b x-text="progStreak()"></b><span>günlük seri 🔥</span></div>
+            <div class="pg-tile"><b x-text="progActiveDays() + '/14'"></b><span>aktif gün</span></div>
+            <div class="pg-tile"><b x-text="prog.data.kids.stars"></b><span>Minikler yıldızı ⭐</span></div>
+            <div class="pg-tile"><b x-text="(prog.data.exams.subjects.length ? '%' + progExamPct() : '–')"></b><span>sınav başarısı</span></div>
+            <div class="pg-tile"><b x-text="prog.data.match.wins + '/' + prog.data.match.games"></b><span>maç galibiyeti 🏆</span></div>
+          </div>
+          <p class="hint" x-show="progEmpty()">Henüz kayıt yok. Minikler, Sınava Hazırlık ya da maç oynadıkça gelişim burada görünür.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Son 14 gün</h3>
+          <div class="pg-legend"><span><i class="sw pk"></i>Minikler yıldızı</span><span><i class="sw pe"></i>Sınavda doğru cevap</span></div>
+          <div class="pg-chart" role="img" :aria-label="'Son 14 günde ' + progActiveDays() + ' gün etkinlik var'">
+            <template x-for="d in progDays()" :key="d.key">
+              <div class="pg-col" @mouseenter="prog.hover=d.key" @mouseleave="prog.hover=null" @click="prog.hover = prog.hover===d.key ? null : d.key" :class="prog.hover===d.key && 'on'">
+                <div class="pg-tip" x-show="prog.hover===d.key" x-text="d.date + ': ' + d.kids + ' yıldız, ' + d.exam + ' doğru'"></div>
+                <div class="pg-stack">
+                  <i class="pe" :style="'height:' + (d.exam * 100 / progMax()) + '%'" x-show="d.exam"></i>
+                  <i class="pk" :style="'height:' + (d.kids * 100 / progMax()) + '%'" x-show="d.kids"></i>
+                </div>
+                <small x-text="d.label"></small>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="panel" x-show="prog.data.kids.sets">
+          <h3>🧸 Minikler</h3>
+          <p class="hint" x-text="prog.data.kids.sets + ' etkinlik, toplam ' + prog.data.kids.stars + ' yıldız'"></p>
+          <div class="pg-bars">
+            <template x-for="a in progAreas().filter(a => a.total)" :key="a.key">
+              <div class="pg-bar" :title="a.correct + ' / ' + a.total + ' doğru'">
+                <span class="pg-name" x-text="a.icon + ' ' + a.name"></span>
+                <span class="pg-track"><i :class="progLevelClass(a.pct)" :style="'width:' + Math.max(2, a.pct) + '%'"></i></span>
+                <span class="pg-val"><b x-text="'%' + a.pct"></b> <small x-text="progLevel(a.pct)"></small></span>
+              </div>
+            </template>
+          </div>
+          <template x-if="progKidsAdvice() && prog.back==='lobby'">
+            <div class="pg-advice">
+              <span x-text="'Öneri: ' + progKidsAdvice().icon + ' ' + progKidsAdvice().name + ' alanında biraz daha pratik yap.'"></span>
+              <button class="btn small primary" @click="openKids(progKidsAdvice().key)">Hemen oyna</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="panel" x-show="prog.data.exams.subjects.length">
+          <h3>📚 Sınava Hazırlık</h3>
+          <div class="pg-bars">
+            <template x-for="s in progSubjects()" :key="s.subject">
+              <div class="pg-bar" :title="s.correct + ' / ' + s.total + ' doğru'">
+                <span class="pg-name" x-text="s.subject"></span>
+                <span class="pg-track"><i :class="progLevelClass(s.pct)" :style="'width:' + Math.max(2, s.pct) + '%'"></i></span>
+                <span class="pg-val"><b x-text="'%' + s.pct"></b> <small x-text="s.correct + '/' + s.total"></small></span>
+              </div>
+            </template>
+          </div>
+          <div class="pg-two">
+            <div>
+              <h4>💪 Güçlü konular</h4>
+              <p class="hint" x-show="!progTopics(true).length">Bir konuda en az 3 soru çözüp %70'i geçince burada görünür.</p>
+              <template x-for="t in progTopics(true)" :key="t.subject + t.topic">
+                <div class="pg-topic good"><span><b x-text="t.topic"></b><small x-text="t.subject"></small></span><b x-text="'%' + t.pct"></b></div>
+              </template>
+            </div>
+            <div>
+              <h4>🎯 Çalışılması gereken konular</h4>
+              <p class="hint" x-show="!progTopics(false).length" x-text="progTopicsReady() ? 'Harika, %70'in altında kalan konu yok!' : 'Bir konuda en az 3 soru çözünce burada görünür.'"></p>
+              <template x-for="t in progTopics(false)" :key="t.subject + t.topic">
+                <div class="pg-topic weak"><span><b x-text="t.topic"></b><small x-text="t.subject + ' · %' + t.pct"></small></span>
+                  <button class="btn small primary" x-show="prog.back==='lobby'" @click="practiceTopic(t)">Çalış</button></div>
+              </template>
+            </div>
+          </div>
+          <h4>Son sınavlar</h4>
+          <div class="pg-recent">
+            <template x-for="(e, i) in prog.data.exams.recent.slice().reverse()" :key="i">
+              <div><span x-text="e.label"></span><small x-text="e.day.split('-').reverse().join('.')"></small><b :class="progLevelClass(e.total ? e.score*100/e.total : 0)" x-text="e.score + '/' + e.total"></b></div>
+            </template>
+          </div>
+        </div>
+
+        <p class="hint pg-key">Seviyeler: <b class="lv4">Çok iyi</b> %85+ · <b class="lv3">İyi</b> %70+ · <b class="lv2">Gelişiyor</b> %50+ · <b class="lv1">Çalışmalı</b></p>
       </div>
     </template>
   </section>
